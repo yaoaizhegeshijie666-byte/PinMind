@@ -16,6 +16,8 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: DATABASE_URL
+      - key: PINMIND_UTC_OFFSET
+        value: "8"
         fromDatabase:
           name: pinmind-db
           property: connectionString

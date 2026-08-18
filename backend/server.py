@@ -1,5 +1,5 @@
 import json, os, sqlite3, uuid, ipaddress, socket, re
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from html.parser import HTMLParser
 from pathlib import Path
@@ -12,6 +12,10 @@ DB_PATH=Path(os.getenv('PINMIND_DB',ROOT/'pinmind.db'))
 MODEL=os.getenv('OPENAI_MODEL','gpt-5.6-terra')
 PORT=int(os.getenv('PORT','8787'))
 HOST=os.getenv('HOST','127.0.0.1')
+UTC_OFFSET_HOURS=int(os.getenv('PINMIND_UTC_OFFSET','8'))
+
+def now_local():
+    return datetime.now(timezone(timedelta(hours=UTC_OFFSET_HOURS)))
 
 
 class TextExtractor(HTMLParser):
@@ -105,7 +109,7 @@ class Handler(BaseHTTPRequestHandler):
             with db() as conn: rows=conn.execute('SELECT * FROM sources ORDER BY captured_at DESC').fetchall()
             return self.send_json({'sources':[row_dict(x) for x in rows]})
         if self.path.startswith('/api/digests/today'):
-            day=datetime.now().date().isoformat()
+            day=now_local().date().isoformat()
             with db() as conn: rows=conn.execute('SELECT * FROM knowledge WHERE digest_date=? ORDER BY created_at',(day,)).fetchall()
             return self.send_json({'digest_date':day,'knowledge_items':[row_dict(x) for x in rows]})
         self.send_json({'error':'not_found'},404)
@@ -125,19 +129,19 @@ class Handler(BaseHTTPRequestHandler):
                     except Exception as exc:
                         if not content: return self.send_json({'error':'link_fetch_failed','detail':str(exc)},422)
                 if not content: return self.send_json({'error':'content_or_url_required'},400)
-                item={'id':'src_'+uuid.uuid4().hex[:12],'input_type':data.get('input_type','selected_text'),'title':data.get('title') or content[:60],'content':content,'url':data.get('url'),'starred':1 if data.get('starred') else 0,'status':'ready','captured_at':datetime.now().isoformat()}
+                item={'id':'src_'+uuid.uuid4().hex[:12],'input_type':data.get('input_type','selected_text'),'title':data.get('title') or content[:60],'content':content,'url':data.get('url'),'starred':1 if data.get('starred') else 0,'status':'ready','captured_at':now_local().isoformat()}
                 with db() as conn: conn.execute('INSERT INTO sources VALUES(:id,:input_type,:title,:content,:url,:starred,:status,:captured_at)',item)
                 return self.send_json({'source':item},201)
             if self.path=='/api/digests/generate':
-                day=datetime.now().date().isoformat()
+                day=now_local().date().isoformat()
                 with db() as conn: sources=[dict(x) for x in conn.execute("SELECT * FROM sources WHERE status='ready' ORDER BY starred DESC,captured_at DESC LIMIT 12").fetchall()]
                 if not sources:return self.send_json({'error':'no_ready_sources'},409)
                 result=generate(sources)
                 with db() as conn:
                     conn.execute('DELETE FROM knowledge WHERE digest_date=?',(day,))
                     for item in result['knowledge_items']:
-                        conn.execute('INSERT INTO knowledge VALUES(?,?,?,?,?,?,?,?,?)',('kn_'+uuid.uuid4().hex[:12],day,item['headline'],json.dumps(item['sections'],ensure_ascii=False),json.dumps(item['source_ids']),json.dumps(item['topic_names'],ensure_ascii=False),json.dumps(item['tags'],ensure_ascii=False),'candidate',datetime.now().isoformat()))
-                    conn.execute('INSERT OR REPLACE INTO digests VALUES(?,?,?)',(day,'ready',datetime.now().isoformat()))
+                        conn.execute('INSERT INTO knowledge VALUES(?,?,?,?,?,?,?,?,?)',('kn_'+uuid.uuid4().hex[:12],day,item['headline'],json.dumps(item['sections'],ensure_ascii=False),json.dumps(item['source_ids']),json.dumps(item['topic_names'],ensure_ascii=False),json.dumps(item['tags'],ensure_ascii=False),'candidate',now_local().isoformat()))
+                    conn.execute('INSERT OR REPLACE INTO digests VALUES(?,?,?)',(day,'ready',now_local().isoformat()))
                 return self.send_json({'digest_date':day,**result})
             self.send_json({'error':'not_found'},404)
         except RuntimeError as exc:self.send_json({'error':str(exc)},503)

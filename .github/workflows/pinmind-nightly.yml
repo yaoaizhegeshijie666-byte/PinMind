@@ -1,0 +1,21 @@
+name: PinMind nightly digest
+
+on:
+  schedule:
+    - cron: "0 14 * * *"
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Wake Render and generate digest
+        env:
+          CRON_SECRET: ${{ secrets.PINMIND_CRON_SECRET }}
+        run: |
+          curl --retry 3 --retry-delay 20 --max-time 180 \
+            --fail-with-body \
+            -X POST \
+            -H "X-Cron-Secret: $CRON_SECRET" \
+            https://pinmind-api.onrender.com/api/jobs/nightly
