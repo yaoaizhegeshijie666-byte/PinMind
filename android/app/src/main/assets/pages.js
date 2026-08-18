@@ -167,7 +167,7 @@ window.addEventListener('resize',updateGraphEdges);
 pageHost.addEventListener('change',event=>{if(event.target.matches('input[type=time]')){localStorage.setItem('pinmind.dailyTime',event.target.value);if(typeof updateDailySchedule==='function')updateDailySchedule();}});
 
 
-function applySourceFilters(){const type=pageHost.dataset.sourceType||'all',status=pageHost.dataset.sourceStatus||'all';pageHost.querySelectorAll('.source-row').forEach(row=>row.hidden=(type!=='all'&&row.dataset.sourceType!==type)||(status!=='all'&&row.dataset.sourceStatus!==status));}
+function applySourceFilters(){const type=pageHost.dataset.sourceType||'all',status=pageHost.dataset.sourceStatus||'all';pageHost.querySelectorAll('.source-row').forEach(row=>{const hidden=(type!=='all'&&row.dataset.sourceType!==type)||(status!=='all'&&row.dataset.sourceStatus!==status);row.hidden=hidden;row.style.display=hidden?'none':'';});}
 pageHost.addEventListener('click',event=>{
   const toggle=event.target.closest('[data-source-filter-toggle]');if(toggle){event.stopPropagation();const menu=pageHost.querySelector(`[data-source-filter-menu="${toggle.dataset.sourceFilterToggle}"]`);pageHost.querySelectorAll('.filter-menu').forEach(item=>{if(item!==menu)item.classList.remove('open')});menu.classList.toggle('open');return;}
   const option=event.target.closest('[data-source-filter-menu] [data-value]');if(option){event.stopPropagation();const menu=option.closest('[data-source-filter-menu]'),kind=menu.dataset.sourceFilterMenu;pageHost.dataset[kind==='type'?'sourceType':'sourceStatus']=option.dataset.value;pageHost.querySelector(`[data-source-filter-toggle="${kind}"]`).textContent=option.textContent;menu.classList.remove('open');applySourceFilters();return;}
