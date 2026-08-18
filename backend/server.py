@@ -118,9 +118,12 @@ class Handler(BaseHTTPRequestHandler):
                 self.path='/api/digests/generate'
             if self.path=='/api/sources':
                 data=self.body();content=str(data.get('content','')).strip();url=data.get('url')
-                if not content and url:
-                    try: content=safe_fetch(url)
-                    except Exception as exc: return self.send_json({'error':'link_fetch_failed','detail':str(exc)},422)
+                if url and (not content or len(content)<500):
+                    try:
+                        extracted=safe_fetch(url)
+                        if extracted: content=extracted
+                    except Exception as exc:
+                        if not content: return self.send_json({'error':'link_fetch_failed','detail':str(exc)},422)
                 if not content: return self.send_json({'error':'content_or_url_required'},400)
                 item={'id':'src_'+uuid.uuid4().hex[:12],'input_type':data.get('input_type','selected_text'),'title':data.get('title') or content[:60],'content':content,'url':data.get('url'),'starred':1 if data.get('starred') else 0,'status':'ready','captured_at':datetime.now().isoformat()}
                 with db() as conn: conn.execute('INSERT INTO sources VALUES(:id,:input_type,:title,:content,:url,:starred,:status,:captured_at)',item)
