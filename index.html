@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f4f2ed" />
+  <title>PinMind · 今日知识</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="pages.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="主导航">
+      <div class="brand"><svg class="brand-logo" aria-hidden="true" viewBox="0 0 32 32"><path d="M9 23.5V8.5A4.5 4.5 0 0 1 13.5 4h5a6 6 0 0 1 0 12H9"/><circle cx="18.5" cy="10" r="2.3"/><path class="logo-link" d="M13 24l3 4 3-4"/></svg><span>PinMind</span></div>
+      <label class="search">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <input type="search" placeholder="搜索知识、主题或来源" />
+      </label>
+      <nav>
+        <button class="nav-item active" data-page="today"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>今日知识</button>
+        <button class="nav-item" data-page="library"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="7" r="2.5"/><circle cx="12" cy="17" r="2.5"/><path d="M9.2 8.3l1.9 6.3m3.7-6.3-1.9 6.3M9.5 7h5"/></svg></span>知识库</button>
+        <button class="nav-item muted" data-page="uncollected"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M5 8h14v11H5zM8 5h8l2 3H6z"/><path d="M9 12h6"/></svg></span>未收录</button>
+        <button class="nav-item muted" data-page="sources"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M8 5H5v14h11v-3"/><path d="M11 4h8v8M19 4l-9 9"/></svg></span>来源记录</button>
+      </nav>
+      <section class="history" aria-label="历史知识">
+        <div class="history-heading"><span>历史知识</span><small>未阅</small></div>
+        <button class="history-item current"><span class="history-dot"></span><span><time>8月17日</time><strong>为什么 AI 产品仍需保留人工确认</strong><em>4 条知识</em></span></button>
+        <button class="history-item"><span class="history-dot blue-dot"></span><span><time>8月15日</time><strong>知识真正被使用，才完成了整理</strong><em>3 条知识</em></span></button>
+        <button class="history-item"><span class="history-dot mint-dot"></span><span><time>8月12日</time><strong>好问题比更多功能更接近用户需求</strong><em>5 条知识</em></span></button>
+      </section>
+      <button class="nav-item settings" data-page="settings"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/></svg></span>设置</button>
+    </aside>
+
+    <main>
+      <div class="mobile-bar">
+        <button class="icon-button" id="menuButton" aria-label="打开菜单">☰</button>
+        <div class="brand compact"><svg class="brand-logo" aria-hidden="true" viewBox="0 0 32 32"><path d="M9 23.5V8.5A4.5 4.5 0 0 1 13.5 4h5a6 6 0 0 1 0 12H9"/><circle cx="18.5" cy="10" r="2.3"/><path class="logo-link" d="M13 24l3 4 3-4"/></svg><span>PinMind</span></div>
+        <button class="icon-button" aria-label="搜索">⌕</button>
+      </div>
+      <div class="content" id="todayPage">
+        <header class="page-header">
+          <div><p class="eyebrow">DAILY EDITION</p><h1>今日知识</h1><p class="date">2026年8月18日 · 星期二</p></div>
+          <button class="read-button" id="readButton">已阅</button>
+        </header>
+
+        <section class="intro"><span></span><p>从你今天捕捉的内容中，PinMind 整理了 3 条值得留下的知识。</p></section>
+        <section class="knowledge-list" id="knowledgeList"></section>
+
+        <section class="empty-state" id="emptyState" hidden>
+          <div class="empty-graphic"><span></span><span></span><span></span></div>
+          <h2>今日知识已阅</h2>
+          <p>新的知识正在慢慢形成，明天见。</p>
+          <button>查看知识库</button>
+        </section>
+      </div>
+      <div class="page-host" id="pageHost" hidden></div>
+    </main>
+  </div>
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <header><div><p>关联知识</p><h2>用户信任来自可理解、可控制和可撤销</h2></div><button id="closeDrawer" aria-label="关闭">×</button></header>
+    <div class="drawer-body"><span class="topic-tag mint">AI 产品设计</span><p class="drawer-lead">当用户能理解系统为什么行动、能在关键节点接管，并能撤销错误结果时，自动化才会转化为真正的信任。</p><h3>核心判断</h3><p>信任不是来自“AI 从不犯错”，而是来自错误发生后仍有清晰、低成本的恢复路径。</p><div class="source-panel"><span>收录于 2026年8月12日</span><a href="#">来源：《生成式 AI 产品的信任设计》↗</a></div></div>
+  </aside>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script src="pages.js"></script>
+</body>
+</html>
+
+
+
+
+
+

@@ -1,0 +1,10 @@
+.toolchain/
+android/build-manual/
+android/app/build/
+backend/pinmind.db
+backend/.env
+backend/__pycache__/
+*.apk
+*.idsig
+*.jks
+*.keystore
