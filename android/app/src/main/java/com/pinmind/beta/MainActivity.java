@@ -1,11 +1,18 @@
 package com.pinmind.beta;
 
 import android.app.Activity;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.view.ViewGroup;
+import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -14,6 +21,7 @@ import java.util.Set;
 
 public class MainActivity extends Activity {
     private WebView webView;
+    private TextView statusView;
     private boolean pageReady;
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -22,21 +30,49 @@ public class MainActivity extends Activity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
+        settings.setLoadsImagesAutomatically(true);
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        WebView.setWebContentsDebuggingEnabled(true);
+        statusView=new TextView(this);
+        statusView.setText("PinMind 0.3.6 · 正在加载…");
+        statusView.setTextColor(Color.rgb(91,86,78));
+        statusView.setTextSize(12);
+        statusView.setBackgroundColor(Color.rgb(247,246,242));
+        statusView.setPadding(32,18,24,18);
+        LinearLayout root=new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.addView(statusView,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.addView(webView,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
         webView.setWebViewClient(new WebViewClient(){
-            @Override public void onPageFinished(WebView view,String url){pageReady=true;syncCaptures();}
+            @Override public void onPageFinished(WebView view,String url){
+                view.evaluateJavascript("document.body?document.body.innerText.length:-1",value->{
+                    pageReady=true;
+                    statusView.setText("PinMind 0.3.6 · 页面已加载（内容 "+value+" 字符）");
+                    statusView.postDelayed(()->statusView.setVisibility(TextView.GONE),1800);
+                    syncCaptures();
+                });
+            }
+            @Override public void onReceivedError(WebView view,WebResourceRequest request,WebResourceError error){
+                if(request.isForMainFrame())statusView.setText("PinMind 加载失败 · "+error.getDescription());
+            }
+        });
+        webView.setWebChromeClient(new WebChromeClient(){
+            @Override public boolean onConsoleMessage(ConsoleMessage message){
+                if(message.messageLevel()==ConsoleMessage.MessageLevel.ERROR)statusView.setText("页面脚本错误 · "+message.message());
+                return true;
+            }
         });
         webView.addJavascriptInterface(new NativeBridge(),"PinMindNative");
-        setContentView(webView);
+        setContentView(root);
         try{
             Scanner scanner=new Scanner(getAssets().open("index.html"),"UTF-8").useDelimiter("\\A");
             String html=scanner.hasNext()?scanner.next():"";
             scanner.close();
-            webView.loadDataWithBaseURL("file:///android_asset/",html,"text/html","UTF-8",null);
+            if(html.trim().isEmpty())throw new IllegalStateException("index.html 内容为空");
+            webView.loadUrl("file:///android_asset/index.html");
         }catch(Exception error){
-            TextView message=new TextView(this);
-            message.setText("PinMind 加载失败\n"+error.getClass().getSimpleName()+": "+error.getMessage());
-            message.setPadding(48,72,48,48);
-            setContentView(message);
+            statusView.setText("PinMind 加载失败 · "+error.getClass().getSimpleName()+": "+error.getMessage());
         }
     }
     private void syncCaptures(){webView.evaluateJavascript("if(typeof syncNativeCaptures==='function')syncNativeCaptures()",null);}
