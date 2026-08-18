@@ -66,12 +66,16 @@ document.querySelectorAll('.nav-item[data-page]').forEach(item => item.addEventL
   if(item.dataset.page==='today')resetTodayView();
   openPage(item.dataset.page);
 }));
-searchInputs.forEach(input=>input.addEventListener('keydown',event=>{if(event.key==='Enter'&&input.value.trim()){openPage('search',input.value.trim());document.querySelector('#mobileSearch').classList.remove('open');}}));
+searchInputs.forEach(input=>input.addEventListener('keydown',event=>{if(event.key==='Enter'&&input.value.trim()){openPage('search',input.value.trim());const search=document.querySelector('#mobileSearch');search.classList.remove('open');search.setAttribute('aria-hidden','true');}}));
 const mobileSearchButton=document.querySelector('#mobileSearchButton');
 mobileSearchButton.addEventListener('click',()=>{
   const search=document.querySelector('#mobileSearch');
-  search.classList.toggle('open');
-  if(search.classList.contains('open'))search.querySelector('input').focus();
+  search.classList.add('open');search.setAttribute('aria-hidden','false');
+  search.querySelector('input').focus();
+});
+document.querySelector('#closeMobileSearch').addEventListener('click',()=>{
+  const search=document.querySelector('#mobileSearch');
+  search.classList.remove('open');search.setAttribute('aria-hidden','true');
 });
 const historyDigests={'8月17日':'为什么 AI 产品仍需保留人工确认','8月15日':'知识真正被使用，才完成了整理','8月12日':'好问题比更多功能更接近用户需求'};
 document.querySelectorAll('.history-item').forEach(item=>item.addEventListener('click',()=>{
