@@ -1,0 +1,27 @@
+databases:
+  - name: pinmind-db
+    plan: free
+    databaseName: pinmind
+    user: pinmind
+
+services:
+  - type: web
+    name: pinmind-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile.render
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pinmind-db
+          property: connectionString
+      - key: PINMIND_DEVICE_TOKEN
+        sync: false
+      - key: PINMIND_CRON_SECRET
+        generateValue: true
+      - key: PINMIND_CORS_ORIGIN
+        value: "*"
