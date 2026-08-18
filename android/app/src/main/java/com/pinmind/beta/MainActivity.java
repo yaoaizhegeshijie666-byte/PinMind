@@ -3,6 +3,7 @@ package com.pinmind.beta;
 import android.app.Activity;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
@@ -26,6 +27,7 @@ public class MainActivity extends Activity {
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         webView=new WebView(this);
+        webView.setLayerType(View.LAYER_TYPE_SOFTWARE,null);
         WebSettings settings=webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -35,7 +37,7 @@ public class MainActivity extends Activity {
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         WebView.setWebContentsDebuggingEnabled(true);
         statusView=new TextView(this);
-        statusView.setText("PinMind 0.3.6 · 正在加载…");
+        statusView.setText("PinMind 0.3.7 · 正在加载…");
         statusView.setTextColor(Color.rgb(91,86,78));
         statusView.setTextSize(12);
         statusView.setBackgroundColor(Color.rgb(247,246,242));
@@ -48,7 +50,7 @@ public class MainActivity extends Activity {
             @Override public void onPageFinished(WebView view,String url){
                 view.evaluateJavascript("document.body?document.body.innerText.length:-1",value->{
                     pageReady=true;
-                    statusView.setText("PinMind 0.3.6 · 页面已加载（内容 "+value+" 字符）");
+                    statusView.setText("PinMind 0.3.7 · 页面已加载（软件渲染，内容 "+value+" 字符）");
                     statusView.postDelayed(()->statusView.setVisibility(TextView.GONE),1800);
                     syncCaptures();
                 });
