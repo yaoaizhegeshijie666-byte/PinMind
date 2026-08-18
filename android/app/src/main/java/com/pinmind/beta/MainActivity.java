@@ -6,8 +6,10 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import java.util.Scanner;
 import java.util.Set;
 
 public class MainActivity extends Activity {
@@ -25,7 +27,17 @@ public class MainActivity extends Activity {
         });
         webView.addJavascriptInterface(new NativeBridge(),"PinMindNative");
         setContentView(webView);
-        webView.loadUrl("file:///android_asset/index.html");
+        try{
+            Scanner scanner=new Scanner(getAssets().open("index.html"),"UTF-8").useDelimiter("\\A");
+            String html=scanner.hasNext()?scanner.next():"";
+            scanner.close();
+            webView.loadDataWithBaseURL("file:///android_asset/",html,"text/html","UTF-8",null);
+        }catch(Exception error){
+            TextView message=new TextView(this);
+            message.setText("PinMind 加载失败\n"+error.getClass().getSimpleName()+": "+error.getMessage());
+            message.setPadding(48,72,48,48);
+            setContentView(message);
+        }
     }
     private void syncCaptures(){webView.evaluateJavascript("if(typeof syncNativeCaptures==='function')syncNativeCaptures()",null);}
     @Override protected void onResume(){super.onResume();if(pageReady)syncCaptures();}
