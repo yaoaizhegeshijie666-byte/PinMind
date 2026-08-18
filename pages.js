@@ -114,6 +114,11 @@ pageHost.addEventListener('click', event => {
   const remove=event.target.closest('.module-delete');
   if(remove){event.preventDefault();event.stopPropagation();const card=remove.closest('.knowledge-module');card.classList.add('removing');setTimeout(()=>card.remove(),160);return;}
   const view=event.target.closest('[data-library-view]');
+  if(view?.dataset.libraryView==='graph'){
+    const graphCount=pageHost.querySelectorAll('.knowledge-module').length;
+    pageHost.querySelector('.graph-node.hub small').textContent=`${graphCount} 条知识`;
+    pageHost.querySelector('.graph-toolbar span').textContent='拖动节点 · 使用滚轮缩放 · 双击查看详情';
+  }
   if(view){document.querySelectorAll('[data-library-view]').forEach(button=>button.classList.toggle('active',button===view));['board','hierarchy','graph'].forEach(name=>{const el=document.querySelector('#'+name+'View');if(el)el.hidden=view.dataset.libraryView!==name;});if(view.dataset.libraryView==='graph')requestAnimationFrame(updateGraphEdges);return;}
   const module=event.target.closest('.knowledge-module');if(module)showDetail('knowledge',module.querySelector('h3').textContent);
 },true);
@@ -165,7 +170,7 @@ const searchScopeResults={
   uncollected:`<article><span>未收录 · AI 产品</span><h2>模型能力不是产品价值，稳定解决问题才是。</h2><p>模型升级只有转化为更低的失败率、更少的等待和更清晰的结果，才构成产品价值。</p><small>来自 8月16日知识单</small></article>`,
   sources:`<article><span>来源记录 · 网页链接</span><h2>AI Agent 的产品边界</h2><p>少数派 · 今天 16:42 · 解析完成</p><small>已生成 2 条知识</small></article><article><span>来源记录 · 文字</span><h2>用户访谈摘录：智能与控制感</h2><p>微信 · 今天 14:18 · 解析完成</p><small>已生成 1 条知识</small></article>`
 };
-pageHost.addEventListener('click',event=>{
+pageHost.addEventListener('dblclick',event=>{
   const tab=event.target.closest('[data-search-scope]');if(tab){pageHost.querySelectorAll('[data-search-scope]').forEach(item=>item.classList.toggle('active',item===tab));const list=pageHost.querySelector('.result-list');if(list)list.innerHTML=searchScopeResults[tab.dataset.searchScope];return;}
   const graphNode=event.target.closest('.graph-node');if(graphNode){const title=graphNode.childNodes[0].textContent.trim();showGraphDetail(title);}
 });
