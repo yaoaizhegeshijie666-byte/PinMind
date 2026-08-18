@@ -16,3 +16,5 @@
 .knowledge-card>h2:after{display:none}
 .knowledge-card>h2+p{margin-top:16px}
 .knowledge-card.blue>h2{background-image:linear-gradient(transparent 76%,var(--blue-soft) 76%,var(--blue-soft) 96%,transparent 96%)}.knowledge-card.mint>h2{background-image:linear-gradient(transparent 76%,var(--mint-soft) 76%,var(--mint-soft) 96%,transparent 96%)}
+[data-filter-toggle],[data-source-filter-toggle]{position:relative;min-width:112px;padding-right:34px!important;text-align:left}
+[data-filter-toggle]:after,[data-source-filter-toggle]:after{content:'⌄';position:absolute;right:12px;top:50%;line-height:1;transform:translateY(-55%)}

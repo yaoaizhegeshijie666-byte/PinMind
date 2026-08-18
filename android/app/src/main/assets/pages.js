@@ -43,6 +43,7 @@ function openPage(page, query='') {
   document.querySelectorAll('.nav-item[data-page]').forEach(item => item.classList.toggle('active', item.dataset.page === page));
   if (page === 'today') { pageHost.hidden = true; todayPage.hidden = false; }
   else { todayPage.hidden = true; pageHost.hidden = false; pageHost.innerHTML = page === 'search' ? pageTemplates.search(query) : pageTemplates[page]; if(page==='settings'){const time=pageHost.querySelector('input[type=time]');if(time)time.value=localStorage.getItem('pinmind.dailyTime')||'22:00';const api=pageHost.querySelector('#apiBaseInput');if(api)api.value=localStorage.getItem('pinmind.apiBase')||'';} }
+  pageHost.querySelectorAll('[data-filter-toggle],[data-source-filter-toggle]').forEach(button=>button.textContent=button.textContent.replace(/⌄$/,''));
   document.querySelector('main').scrollTo({top: 0, behavior: 'smooth'});
   document.querySelector('#sidebar').classList.remove('open');
   document.querySelector('#scrim').classList.remove('open');
@@ -141,7 +142,7 @@ pageHost.addEventListener('click',event=>{
   const toggle=event.target.closest('[data-filter-toggle]');
   if(toggle){event.stopPropagation();const menu=pageHost.querySelector(`[data-filter-menu="${toggle.dataset.filterToggle}"]`);pageHost.querySelectorAll('.filter-menu').forEach(item=>{if(item!==menu)item.classList.remove('open')});menu.classList.toggle('open');return;}
   const option=event.target.closest('.filter-menu [data-value]');
-  if(option){event.stopPropagation();const menu=option.closest('.filter-menu');const type=menu.dataset.filterMenu;const trigger=pageHost.querySelector(`[data-filter-toggle="${type}"]`);trigger.textContent=option.textContent+'⌄';menu.classList.remove('open');
+  if(option){event.stopPropagation();const menu=option.closest('.filter-menu');const type=menu.dataset.filterMenu;const trigger=pageHost.querySelector(`[data-filter-toggle="${type}"]`);trigger.textContent=option.textContent;menu.classList.remove('open');
     if(type==='theme'){pageHost.querySelectorAll('.cluster').forEach(cluster=>cluster.hidden=option.dataset.value!=='all'&&!cluster.classList.contains(option.dataset.value+'-cluster'));pageHost.querySelectorAll('.graph-node:not(.hub)').forEach(node=>node.hidden=option.dataset.value!=='all'&&!node.classList.contains(option.dataset.value+'-node'));updateGraphEdges();}
     if(type==='time'){pageHost.querySelectorAll('.knowledge-module').forEach(card=>card.hidden=option.dataset.value==='7'&&(/8月(7|8|10)日/.test(card.textContent)));}
     return;
@@ -158,7 +159,7 @@ pageHost.addEventListener('change',event=>{if(event.target.matches('input[type=t
 function applySourceFilters(){const type=pageHost.dataset.sourceType||'all',status=pageHost.dataset.sourceStatus||'all';pageHost.querySelectorAll('.source-row').forEach(row=>row.hidden=(type!=='all'&&row.dataset.sourceType!==type)||(status!=='all'&&row.dataset.sourceStatus!==status));}
 pageHost.addEventListener('click',event=>{
   const toggle=event.target.closest('[data-source-filter-toggle]');if(toggle){event.stopPropagation();const menu=pageHost.querySelector(`[data-source-filter-menu="${toggle.dataset.sourceFilterToggle}"]`);pageHost.querySelectorAll('.filter-menu').forEach(item=>{if(item!==menu)item.classList.remove('open')});menu.classList.toggle('open');return;}
-  const option=event.target.closest('[data-source-filter-menu] [data-value]');if(option){event.stopPropagation();const menu=option.closest('[data-source-filter-menu]'),kind=menu.dataset.sourceFilterMenu;pageHost.dataset[kind==='type'?'sourceType':'sourceStatus']=option.dataset.value;pageHost.querySelector(`[data-source-filter-toggle="${kind}"]`).textContent=option.textContent+'⌄';menu.classList.remove('open');applySourceFilters();return;}
+  const option=event.target.closest('[data-source-filter-menu] [data-value]');if(option){event.stopPropagation();const menu=option.closest('[data-source-filter-menu]'),kind=menu.dataset.sourceFilterMenu;pageHost.dataset[kind==='type'?'sourceType':'sourceStatus']=option.dataset.value;pageHost.querySelector(`[data-source-filter-toggle="${kind}"]`).textContent=option.textContent;menu.classList.remove('open');applySourceFilters();return;}
   const danger=event.target.closest('.uncollected-card .danger');if(danger){event.stopPropagation();showDeleteConfirm(danger.closest('.uncollected-card'));}
 },true);
 function showDeleteConfirm(card){const dialog=document.createElement('div');dialog.className='confirm-dialog';dialog.innerHTML='<h2>删除这条未收录知识？</h2><p>删除后将无法恢复，但不会删除原始来源记录。</p><div><button class="cancel-delete">取消</button><button class="confirm-delete">确认删除</button></div>';document.body.appendChild(dialog);document.querySelector('#scrim').classList.add('open');requestAnimationFrame(()=>dialog.classList.add('open'));const close=()=>{dialog.classList.remove('open');document.querySelector('#scrim').classList.remove('open');setTimeout(()=>dialog.remove(),180)};dialog.querySelector('.cancel-delete').addEventListener('click',close);dialog.querySelector('.confirm-delete').addEventListener('click',()=>{card.remove();close()});}
