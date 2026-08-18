@@ -29,6 +29,9 @@ const items = [
 const list = document.querySelector('#knowledgeList');
 const collectedKeys=new Set(JSON.parse(localStorage.getItem('pinmind.collected')||'[]'));
 const saveCollected=()=>localStorage.setItem('pinmind.collected',JSON.stringify([...collectedKeys]));
+const libraryItems=()=>JSON.parse(localStorage.getItem('pinmind.libraryItems')||'[]');
+function saveLibraryItem(item,selected){const saved=libraryItems().filter(entry=>entry.headline!==item.headline);if(selected)saved.push(item);localStorage.setItem('pinmind.libraryItems',JSON.stringify(saved));window.dispatchEvent(new CustomEvent('pinmind:library-updated'));}
+window.saveLibraryItem=saveLibraryItem;
 items.forEach((item, index) => {
   const article = document.createElement('article');
   article.className = `knowledge-card ${item.tone}`;
@@ -45,7 +48,7 @@ items.forEach((item, index) => {
 
 document.querySelectorAll('.toggle').forEach(button => {const key=button.closest('.knowledge-card').dataset.knowledgeKey;if(collectedKeys.has(key)){button.classList.add('selected');button.innerHTML='<span>✓</span> 已收录';}button.addEventListener('click', () => {
   const selected = button.classList.toggle('selected');
-  if(selected)collectedKeys.add(key);else collectedKeys.delete(key);saveCollected();
+  if(selected)collectedKeys.add(key);else collectedKeys.delete(key);saveCollected();saveLibraryItem(items.find(entry=>entry.headline===key),selected);
   button.innerHTML = selected ? '<span>✓</span> 已收录' : '<span>＋</span> 加入知识库';
 });});
 
@@ -65,7 +68,8 @@ document.querySelector('#readButton').addEventListener('click', () => {
   readButton.classList.add('is-read');
   readButton.disabled = true;
   list.classList.add('fade'); document.querySelector('.intro').classList.add('fade');
-  localStorage.setItem('pinmind.read.'+document.querySelector('.date').textContent,'1');
+  const readDate=document.querySelector('.date').textContent;localStorage.setItem('pinmind.read.'+readDate,'1');localStorage.setItem('pinmind.read.'+readDate.split(' · ')[0],'1');
+  window.dispatchEvent(new CustomEvent('pinmind:read-state-changed',{detail:{date:document.querySelector('.date').textContent}}));
   setTimeout(() => { list.hidden = true; document.querySelector('.intro').hidden = true; document.querySelector('#emptyState').hidden = false; }, 180);
 });
 

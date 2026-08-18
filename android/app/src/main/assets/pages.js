@@ -73,6 +73,17 @@ function storedSet(key){return new Set(JSON.parse(localStorage.getItem(key)||'[]
 function saveSet(key,set){localStorage.setItem(key,JSON.stringify([...set]));}
 function restorePageState(){const collected=storedSet('pinmind.collected'),deleted=storedSet('pinmind.deleted');pageHost.querySelectorAll('.uncollected-card').forEach(card=>{const key=card.querySelector('h2')?.textContent||'';if(deleted.has(key)){card.remove();return;}const button=card.querySelector('.collect-small');if(button&&collected.has(key)){button.classList.add('done');button.textContent='✓ 已收录';}});pageHost.querySelectorAll('.knowledge-module').forEach(card=>{const key=card.dataset.id||card.querySelector('h3')?.textContent||'';if(deleted.has('module:'+key))card.remove();});}
 
+function savedLibraryItems(){return JSON.parse(localStorage.getItem('pinmind.libraryItems')||'[]');}
+function renderSavedLibraryItems(){
+  if(!pageHost.querySelector('#boardView'))return;
+  const board=pageHost.querySelector('.orange-cluster .draggable-board'),note=pageHost.querySelector('.markdown-document'),canvas=pageHost.querySelector('#graphCanvas');
+  savedLibraryItems().forEach((item,index)=>{
+    if(![...board.querySelectorAll('h3')].some(title=>title.textContent===item.headline))board.insertAdjacentHTML('beforeend',`<article class="knowledge-module" draggable="true" data-saved="true"><button class="module-delete" aria-label="删除">×</button><span>${item.topic||'新增知识'}</span><h3>${item.headline}</h3><small>已加入知识库</small></article>`);
+    if(![...note.querySelectorAll('h2')].some(title=>title.textContent===item.headline))note.insertAdjacentHTML('beforeend',`<section data-saved="true"><h2>${item.headline}</h2><p>${item.paragraphs?.[0]||item.summary||''}</p></section>`);
+    if(![...canvas.querySelectorAll('.graph-node')].some(node=>node.textContent===item.headline))canvas.insertAdjacentHTML('beforeend',`<button class="graph-node leaf" data-connect="hub" style="left:${18+(index%4)*20}%;top:${84-(index%2)*12}%">${item.headline}</button>`);
+  });
+  const hub=canvas.querySelector('.hub small');if(hub)hub.textContent=`${pageHost.querySelectorAll('.knowledge-module').length} 条知识`;updateGraphEdges();
+}
 function openPage(page, query='') {
   document.querySelectorAll('.nav-item[data-page]').forEach(item => item.classList.toggle('active', item.dataset.page === page));
   if (page === 'today') { pageHost.hidden = true; todayPage.hidden = false; }
@@ -82,6 +93,7 @@ function openPage(page, query='') {
   document.querySelector('#sidebar').classList.remove('open');
   document.querySelector('#scrim').classList.remove('open');
   restorePageState();
+  if(page==='library')renderSavedLibraryItems();
   if(page==='sources')loadLiveSources();
 }
 
@@ -116,6 +128,9 @@ document.querySelector('#closeMobileSearch').addEventListener('click',()=>{
   search.classList.remove('open');search.setAttribute('aria-hidden','true');
 });
 const historyDigests={'8月17日':'为什么 AI 产品仍需保留人工确认','8月15日':'知识真正被使用，才完成了整理','8月12日':'好问题比更多功能更接近用户需求'};
+function historyDate(item){return item.querySelector('time').textContent;}
+document.querySelectorAll('.history-item').forEach(item=>{if(localStorage.getItem('pinmind.read.'+historyDate(item))==='1')item.remove();});
+window.addEventListener('pinmind:read-state-changed',event=>{const day=event.detail.date.split(' · ')[0];document.querySelectorAll('.history-item').forEach(item=>{if(historyDate(item)===day)item.remove();});});
 document.querySelectorAll('.history-item').forEach(item=>item.addEventListener('click',()=>{
   openPage('today');document.querySelectorAll('.history-item').forEach(row=>row.classList.toggle('current',row===item));
   document.querySelector('[data-page="today"]').classList.remove('active');
@@ -152,7 +167,7 @@ function showCaptureSheet() {
 pageHost.addEventListener('click', event => {
   const node = event.target.closest('.node'); if (node) { showDetail('knowledge', node.childNodes[0].textContent.trim()); return; }
   const source = event.target.closest('.source-row'); if (source) { showDetail('source', source.querySelector('strong').textContent); return; }
-  const collect = event.target.closest('.collect-small'); if (collect) { const on=collect.classList.toggle('done'),key=collect.closest('.uncollected-card').querySelector('h2').textContent,set=storedSet('pinmind.collected');if(on)set.add(key);else set.delete(key);saveSet('pinmind.collected',set);collect.textContent=on?'✓ 已收录':'＋ 加入知识库';return; }
+  const collect = event.target.closest('.collect-small'); if (collect) { const on=collect.classList.toggle('done'),card=collect.closest('.uncollected-card'),key=card.querySelector('h2').textContent,set=storedSet('pinmind.collected');if(on)set.add(key);else set.delete(key);saveSet('pinmind.collected',set);window.saveLibraryItem?.({headline:key,topic:card.querySelector('.uncollected-meta span')?.textContent,summary:card.querySelector(':scope>p')?.textContent},on);collect.textContent=on?'✓ 已收录':'＋ 加入知识库';return; }
   if (event.target.closest('#captureButton')) showCaptureSheet();
 });
 
