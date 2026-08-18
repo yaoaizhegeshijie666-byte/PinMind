@@ -1,4 +1,5 @@
 import os
+import re
 from psycopg import connect
 from psycopg.rows import dict_row
 
@@ -21,6 +22,8 @@ class CloudDatabase:
                        status=excluded.status,created_at=excluded.created_at"""
         else:
             query = query.replace("?", "%s")
+            if isinstance(params, dict):
+                query = re.sub(r":([a-z_]+)", r"%(\1)s", query)
         return self.connection.execute(query, params or ())
     def close(self): self.connection.close()
     def __enter__(self):
