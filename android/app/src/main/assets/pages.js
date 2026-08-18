@@ -53,6 +53,8 @@ const todayDefault={
   headline:document.querySelector('.knowledge-card h2').textContent
 };
 document.querySelectorAll('.history-item').forEach(item=>item.classList.remove('current'));
+const historyKnowledgeCount=document.querySelectorAll('.knowledge-card').length;
+document.querySelectorAll('.history-item em').forEach(item=>item.textContent=`${historyKnowledgeCount} 条知识`);
 function resetTodayView(){
   document.querySelectorAll('.history-item').forEach(item=>item.classList.remove('current'));
   document.querySelector('#todayPage h1').textContent='今日知识';
