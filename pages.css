@@ -21,3 +21,5 @@
 .filter-control .filter-menu{top:calc(100% + 6px);left:0;right:auto;width:max-content;min-width:100%;padding:6px;border-color:#dedad2;border-radius:10px;box-shadow:0 8px 22px rgba(28,26,22,.1)}
 .filter-control .filter-menu button{display:flex;align-items:center;min-width:100%;padding:0 12px;white-space:nowrap}
 .filter-control .filter-menu button+button{margin-top:2px}
+[data-filter-toggle]:after,[data-source-filter-toggle]:after{content:'';width:7px;height:7px;border-right:2px solid #69645d;border-bottom:2px solid #69645d;transform:translateY(-70%) rotate(45deg)}
+[data-filter-toggle]:hover:after,[data-source-filter-toggle]:hover:after{border-color:var(--text)}
