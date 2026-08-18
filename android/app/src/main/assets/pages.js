@@ -66,7 +66,7 @@ document.querySelectorAll('.nav-item[data-page]').forEach(item => item.addEventL
   if(item.dataset.page==='today')resetTodayView();
   openPage(item.dataset.page);
 }));
-searchInputs.forEach(input=>input.addEventListener('keydown',event=>{if(event.key==='Enter'&&input.value.trim()){openPage('search',input.value.trim());const search=document.querySelector('#mobileSearch');search.classList.remove('open');search.setAttribute('aria-hidden','true');}}));
+searchInputs.forEach(input=>input.addEventListener('keydown',event=>{if(event.key==='Enter'&&input.value.trim()){input.blur();openPage('search',input.value.trim());const search=document.querySelector('#mobileSearch');search.classList.remove('open');search.setAttribute('aria-hidden','true');}}));
 const mobileSearchButton=document.querySelector('#mobileSearchButton');
 mobileSearchButton.addEventListener('click',()=>{
   const search=document.querySelector('#mobileSearch');
@@ -75,6 +75,7 @@ mobileSearchButton.addEventListener('click',()=>{
 });
 document.querySelector('#closeMobileSearch').addEventListener('click',()=>{
   const search=document.querySelector('#mobileSearch');
+  search.querySelector('input').blur();
   search.classList.remove('open');search.setAttribute('aria-hidden','true');
 });
 const historyDigests={'8月17日':'为什么 AI 产品仍需保留人工确认','8月15日':'知识真正被使用，才完成了整理','8月12日':'好问题比更多功能更接近用户需求'};
@@ -151,7 +152,7 @@ function updateGraphEdges(){
 pageHost.addEventListener('click',event=>{
   const toggle=event.target.closest('[data-filter-toggle]');
   if(toggle){event.stopPropagation();const menu=pageHost.querySelector(`[data-filter-menu="${toggle.dataset.filterToggle}"]`);pageHost.querySelectorAll('.filter-menu').forEach(item=>{if(item!==menu)item.classList.remove('open')});menu.classList.toggle('open');return;}
-  const option=event.target.closest('.filter-menu [data-value]');
+  const option=event.target.closest('[data-filter-menu] [data-value]');
   if(option){event.stopPropagation();const menu=option.closest('.filter-menu');const type=menu.dataset.filterMenu;const trigger=pageHost.querySelector(`[data-filter-toggle="${type}"]`);trigger.textContent=option.textContent;menu.classList.remove('open');
     if(type==='theme'){pageHost.querySelectorAll('.cluster').forEach(cluster=>cluster.hidden=option.dataset.value!=='all'&&!cluster.classList.contains(option.dataset.value+'-cluster'));pageHost.querySelectorAll('.graph-node:not(.hub)').forEach(node=>node.hidden=option.dataset.value!=='all'&&!node.classList.contains(option.dataset.value+'-node'));updateGraphEdges();}
     if(type==='time'){pageHost.querySelectorAll('.knowledge-module').forEach(card=>card.hidden=option.dataset.value==='7'&&(/8月(7|8|10)日/.test(card.textContent)));}

@@ -57,10 +57,6 @@ public class MainActivity extends Activity {
             }
         });
         webView.setWebChromeClient(new WebChromeClient(){
-            @Override public boolean onConsoleMessage(ConsoleMessage message){
-                if(message.messageLevel()==ConsoleMessage.MessageLevel.ERROR){statusView.setVisibility(TextView.VISIBLE);statusView.setText("页面脚本错误 · "+message.message());}
-                return true;
-            }
         });
         webView.addJavascriptInterface(new NativeBridge(),"PinMindNative");
         setContentView(root);
