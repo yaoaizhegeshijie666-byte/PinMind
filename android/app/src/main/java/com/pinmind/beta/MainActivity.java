@@ -12,10 +12,23 @@ import java.util.Set;
 
 public class MainActivity extends Activity {
     private WebView webView;
+    private boolean pageReady;
     @Override public void onCreate(Bundle state) {
-        super.onCreate(state);webView=new WebView(this);WebSettings settings=webView.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);webView.setWebViewClient(new WebViewClient());webView.addJavascriptInterface(new NativeBridge(),"PinMindNative");webView.loadUrl("file:///android_asset/index.html");setContentView(webView);
+        super.onCreate(state);
+        webView=new WebView(this);
+        WebSettings settings=webView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setAllowFileAccess(true);
+        webView.setWebViewClient(new WebViewClient(){
+            @Override public void onPageFinished(WebView view,String url){pageReady=true;syncCaptures();}
+        });
+        webView.addJavascriptInterface(new NativeBridge(),"PinMindNative");
+        setContentView(webView);
+        webView.loadUrl("file:///android_asset/index.html");
     }
-    @Override protected void onResume(){super.onResume();if(webView!=null)webView.evaluateJavascript("if(typeof syncNativeCaptures==='function')syncNativeCaptures()",null);}
+    private void syncCaptures(){webView.evaluateJavascript("if(typeof syncNativeCaptures==='function')syncNativeCaptures()",null);}
+    @Override protected void onResume(){super.onResume();if(pageReady)syncCaptures();}
     @Override public void onBackPressed(){if(webView.canGoBack())webView.goBack();else super.onBackPressed();}
     public class NativeBridge {
         @JavascriptInterface public String getCaptures(){
