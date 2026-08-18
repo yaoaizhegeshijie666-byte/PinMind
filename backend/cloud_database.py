@@ -11,9 +11,9 @@ SCHEMA = (
 class CloudDatabase:
     def __init__(self):
         self.connection = connect(os.environ["DATABASE_URL"], row_factory=dict_row)
-        with self.connection:
-            for statement in SCHEMA:
-                self.connection.execute(statement)
+        for statement in SCHEMA:
+            self.connection.execute(statement)
+        self.connection.commit()
     def execute(self, query, params=None):
         if query.startswith("INSERT OR REPLACE INTO digests"):
             query = """INSERT INTO digests VALUES(%s,%s,%s)
