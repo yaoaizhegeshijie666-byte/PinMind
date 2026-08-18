@@ -37,7 +37,7 @@ public class MainActivity extends Activity {
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         WebView.setWebContentsDebuggingEnabled(true);
         statusView=new TextView(this);
-        statusView.setText("PinMind 0.3.7 · 正在加载…");
+        statusView.setText("PinMind 0.3.8 · 正在检查页面布局…");
         statusView.setTextColor(Color.rgb(91,86,78));
         statusView.setTextSize(12);
         statusView.setBackgroundColor(Color.rgb(247,246,242));
@@ -48,10 +48,10 @@ public class MainActivity extends Activity {
         root.addView(webView,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
         webView.setWebViewClient(new WebViewClient(){
             @Override public void onPageFinished(WebView view,String url){
-                view.evaluateJavascript("document.body?document.body.innerText.length:-1",value->{
+                String probe="(()=>{const e=document.querySelector('h1'),r=e&&e.getBoundingClientRect(),s=e&&getComputedStyle(e);return JSON.stringify({screen:[innerWidth,innerHeight],title:r&&[Math.round(r.x),Math.round(r.y),Math.round(r.width),Math.round(r.height)],display:s&&s.display,visibility:s&&s.visibility,opacity:s&&s.opacity,color:s&&s.color})})()";
+                view.evaluateJavascript(probe,value->{
                     pageReady=true;
-                    statusView.setText("PinMind 0.3.7 · 页面已加载（软件渲染，内容 "+value+" 字符）");
-                    statusView.postDelayed(()->statusView.setVisibility(TextView.GONE),1800);
+                    statusView.setText("PinMind 0.3.8 · "+value);
                     syncCaptures();
                 });
             }
