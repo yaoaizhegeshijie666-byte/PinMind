@@ -15,6 +15,7 @@ public class MainActivity extends Activity {
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);webView=new WebView(this);WebSettings settings=webView.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);webView.setWebViewClient(new WebViewClient());webView.addJavascriptInterface(new NativeBridge(),"PinMindNative");webView.loadUrl("file:///android_asset/index.html");setContentView(webView);
     }
+    @Override protected void onResume(){super.onResume();if(webView!=null)webView.evaluateJavascript("if(typeof syncNativeCaptures==='function')syncNativeCaptures()",null);}
     @Override public void onBackPressed(){if(webView.canGoBack())webView.goBack();else super.onBackPressed();}
     public class NativeBridge {
         @JavascriptInterface public String getCaptures(){
