@@ -39,6 +39,40 @@ const pageTemplates = {
     <section class="result-list"><article><span>AI 产品设计</span><h2><mark>${query}</mark>程度越高，越需要保留用户的关键决策权。</h2><p>AI 适合代替用户完成重复、低风险且可撤销的操作……</p><small>来源：《AI Agent 的产品边界》</small></article><article><span>用户信任</span><h2>可理解和可撤销，决定用户是否接受<mark>${query}</mark>。</h2><p>信任不是来自系统从不犯错，而是来自错误发生后仍有恢复路径。</p><small>来源：《生成式 AI 产品的信任设计》</small></article></section>`
 };
 
+const escapeText=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+function sourcePresentation(item){
+  const raw=item.input_type||'';
+  const type=item.url?'link':raw==='screenshot'?'image':'text';
+  const labels={link:['↗','网页链接'],image:['▧','截图'],text:['文','选中文字']};
+  const status=item.status==='ready'?'complete':item.status||'pending';
+  const statusLabels={complete:['ok','● 已完成'],working:['working','● 解析中'],pending:['warn','● 待补充'],failed:['failed','● 解析失败']};
+  return {type,label:labels[type],status,statusLabel:statusLabels[status]||statusLabels.pending};
+}
+function sourceTime(value){
+  const date=new Date(value);if(Number.isNaN(date.getTime()))return '时间未知';
+  const now=new Date(),same=date.toDateString()===now.toDateString();
+  return same?'今天 '+date.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false}):date.toLocaleDateString('zh-CN',{month:'numeric',day:'numeric'});
+}
+async function loadLiveSources(){
+  const table=pageHost.querySelector('.source-table');if(!table)return;
+  table.querySelectorAll('.source-row,.source-state').forEach(row=>row.remove());
+  table.insertAdjacentHTML('beforeend','<div class="source-state">正在同步来源记录…</div>');
+  try{
+    const data=await PinMindAPI.sources();const sources=data.sources||[];
+    table.querySelector('.source-state')?.remove();
+    if(!sources.length){table.insertAdjacentHTML('beforeend','<div class="source-state">暂无来源，从微信、小红书或浏览器分享内容到 PinMind 后会显示在这里。</div>');return;}
+    sources.forEach(item=>{const view=sourcePresentation(item);table.insertAdjacentHTML('beforeend',`<button class="source-row" data-source-id="${escapeText(item.id)}" data-source-type="${view.type}" data-source-status="${view.status}"><i class="source-icon ${view.type}-icon">${view.label[0]}</i><span><strong>${escapeText(item.title||'未命名来源')}</strong><small>${escapeText(view.label[1])}</small></span><time>${sourceTime(item.captured_at)}</time><em class="${view.statusLabel[0]}">${view.statusLabel[1]}</em><b>${view.status==='complete'?'已保存':'—'}</b></button>`);});
+    applySourceFilters();
+  }catch(error){
+    table.querySelector('.source-state')?.remove();
+    table.insertAdjacentHTML('beforeend',`<div class="source-state source-error">来源同步失败：${escapeText(error.message)}<button data-retry-sources>重新加载</button></div>`);
+  }
+}
+window.addEventListener('pinmind:sources-updated',()=>loadLiveSources());
+function storedSet(key){return new Set(JSON.parse(localStorage.getItem(key)||'[]'));}
+function saveSet(key,set){localStorage.setItem(key,JSON.stringify([...set]));}
+function restorePageState(){const collected=storedSet('pinmind.collected'),deleted=storedSet('pinmind.deleted');pageHost.querySelectorAll('.uncollected-card').forEach(card=>{const key=card.querySelector('h2')?.textContent||'';if(deleted.has(key)){card.remove();return;}const button=card.querySelector('.collect-small');if(button&&collected.has(key)){button.classList.add('done');button.textContent='✓ 已收录';}});pageHost.querySelectorAll('.knowledge-module').forEach(card=>{const key=card.dataset.id||card.querySelector('h3')?.textContent||'';if(deleted.has('module:'+key))card.remove();});}
+
 function openPage(page, query='') {
   document.querySelectorAll('.nav-item[data-page]').forEach(item => item.classList.toggle('active', item.dataset.page === page));
   if (page === 'today') { pageHost.hidden = true; todayPage.hidden = false; }
@@ -47,6 +81,8 @@ function openPage(page, query='') {
   document.querySelector('main').scrollTo({top: 0, behavior: 'smooth'});
   document.querySelector('#sidebar').classList.remove('open');
   document.querySelector('#scrim').classList.remove('open');
+  restorePageState();
+  if(page==='sources')loadLiveSources();
 }
 
 const todayDefault={
@@ -64,6 +100,7 @@ function resetTodayView(){
 }
 document.querySelectorAll('.nav-item[data-page]').forEach(item => item.addEventListener('click', () => {
   if(item.dataset.page==='today')resetTodayView();
+  window.applyReadState?.();
   openPage(item.dataset.page);
 }));
 searchInputs.forEach(input=>input.addEventListener('keydown',event=>{if(event.key==='Enter'&&input.value.trim()){input.blur();openPage('search',input.value.trim());const search=document.querySelector('#mobileSearch');search.classList.remove('open');search.setAttribute('aria-hidden','true');}}));
@@ -88,6 +125,7 @@ document.querySelectorAll('.history-item').forEach(item=>item.addEventListener('
   document.querySelector('#knowledgeList').classList.remove('fade');document.querySelector('.intro').classList.remove('fade');
   const first=document.querySelector('.knowledge-card h2');if(first)first.textContent=historyDigests[day];
   const read=document.querySelector('#readButton');read.disabled=false;read.classList.remove('is-read');
+  window.applyReadState?.();
 }));
 function showDetail(type, title) {
   const detailDrawer = document.querySelector('#drawer');
@@ -114,7 +152,7 @@ function showCaptureSheet() {
 pageHost.addEventListener('click', event => {
   const node = event.target.closest('.node'); if (node) { showDetail('knowledge', node.childNodes[0].textContent.trim()); return; }
   const source = event.target.closest('.source-row'); if (source) { showDetail('source', source.querySelector('strong').textContent); return; }
-  const collect = event.target.closest('.collect-small'); if (collect) { const on = collect.classList.toggle('done'); collect.textContent = on ? '✓ 已收录' : '＋ 加入知识库'; return; }
+  const collect = event.target.closest('.collect-small'); if (collect) { const on=collect.classList.toggle('done'),key=collect.closest('.uncollected-card').querySelector('h2').textContent,set=storedSet('pinmind.collected');if(on)set.add(key);else set.delete(key);saveSet('pinmind.collected',set);collect.textContent=on?'✓ 已收录':'＋ 加入知识库';return; }
   if (event.target.closest('#captureButton')) showCaptureSheet();
 });
 
@@ -124,7 +162,7 @@ pageHost.addEventListener('dragend', () => { if(draggedModule) draggedModule.cla
 pageHost.addEventListener('dragover', event => { const board=event.target.closest('.draggable-board'); if(!board||!draggedModule)return; event.preventDefault(); const target=event.target.closest('.knowledge-module'); if(target&&target!==draggedModule) board.insertBefore(draggedModule,target); else if(!target) board.appendChild(draggedModule); });
 pageHost.addEventListener('click', event => {
   const remove=event.target.closest('.module-delete');
-  if(remove){event.preventDefault();event.stopPropagation();const card=remove.closest('.knowledge-module');card.classList.add('removing');setTimeout(()=>card.remove(),160);return;}
+  if(remove){event.preventDefault();event.stopPropagation();const card=remove.closest('.knowledge-module'),key=card.dataset.id||card.querySelector('h3')?.textContent||'',set=storedSet('pinmind.deleted');set.add('module:'+key);saveSet('pinmind.deleted',set);card.classList.add('removing');setTimeout(()=>card.remove(),160);return;}
   const view=event.target.closest('[data-library-view]');
   if(view?.dataset.libraryView==='graph'){
     const graphCount=pageHost.querySelectorAll('.knowledge-module').length;
@@ -171,9 +209,10 @@ function applySourceFilters(){const type=pageHost.dataset.sourceType||'all',stat
 pageHost.addEventListener('click',event=>{
   const toggle=event.target.closest('[data-source-filter-toggle]');if(toggle){event.stopPropagation();const menu=pageHost.querySelector(`[data-source-filter-menu="${toggle.dataset.sourceFilterToggle}"]`);pageHost.querySelectorAll('.filter-menu').forEach(item=>{if(item!==menu)item.classList.remove('open')});menu.classList.toggle('open');return;}
   const option=event.target.closest('[data-source-filter-menu] [data-value]');if(option){event.stopPropagation();const menu=option.closest('[data-source-filter-menu]'),kind=menu.dataset.sourceFilterMenu;pageHost.dataset[kind==='type'?'sourceType':'sourceStatus']=option.dataset.value;pageHost.querySelector(`[data-source-filter-toggle="${kind}"]`).textContent=option.textContent;menu.classList.remove('open');applySourceFilters();return;}
+  if(event.target.closest('[data-retry-sources]')){loadLiveSources();return;}
   const danger=event.target.closest('.uncollected-card .danger');if(danger){event.stopPropagation();showDeleteConfirm(danger.closest('.uncollected-card'));}
 },true);
-function showDeleteConfirm(card){const dialog=document.createElement('div');dialog.className='confirm-dialog';dialog.innerHTML='<h2>删除这条未收录知识？</h2><p>删除后将无法恢复，但不会删除原始来源记录。</p><div><button class="cancel-delete">取消</button><button class="confirm-delete">确认删除</button></div>';document.body.appendChild(dialog);document.querySelector('#scrim').classList.add('open');requestAnimationFrame(()=>dialog.classList.add('open'));const close=()=>{dialog.classList.remove('open');document.querySelector('#scrim').classList.remove('open');setTimeout(()=>dialog.remove(),180)};dialog.querySelector('.cancel-delete').addEventListener('click',close);dialog.querySelector('.confirm-delete').addEventListener('click',()=>{card.remove();close()});}
+function showDeleteConfirm(card){const dialog=document.createElement('div');dialog.className='confirm-dialog';dialog.innerHTML='<h2>删除这条未收录知识？</h2><p>删除后将无法恢复，但不会删除原始来源记录。</p><div><button class="cancel-delete">取消</button><button class="confirm-delete">确认删除</button></div>';document.body.appendChild(dialog);document.querySelector('#scrim').classList.add('open');requestAnimationFrame(()=>dialog.classList.add('open'));const close=()=>{dialog.classList.remove('open');document.querySelector('#scrim').classList.remove('open');setTimeout(()=>dialog.remove(),180)};dialog.querySelector('.cancel-delete').addEventListener('click',close);dialog.querySelector('.confirm-delete').addEventListener('click',()=>{const set=storedSet('pinmind.deleted');set.add(card.querySelector('h2')?.textContent||'');saveSet('pinmind.deleted',set);card.remove();close()});}
 pageHost.addEventListener('wheel',event=>{const canvas=event.target.closest('#graphCanvas');if(!canvas)return;event.preventDefault();const factor=event.deltaY<0?1.1:.9;let zoom=parseFloat(canvas.dataset.zoom||'1');const next=Math.max(.65,Math.min(1.65,zoom*factor));const applied=next/zoom;canvas.dataset.zoom=String(next);canvas.querySelectorAll('.graph-node').forEach(node=>{const left=parseFloat(node.style.left),top=parseFloat(node.style.top);node.style.left=(50+(left-50)*applied)+'%';node.style.top=(50+(top-50)*applied)+'%';});updateGraphEdges();},{passive:false});
 
 

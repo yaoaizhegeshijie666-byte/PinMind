@@ -27,9 +27,12 @@ const items = [
 ];
 
 const list = document.querySelector('#knowledgeList');
+const collectedKeys=new Set(JSON.parse(localStorage.getItem('pinmind.collected')||'[]'));
+const saveCollected=()=>localStorage.setItem('pinmind.collected',JSON.stringify([...collectedKeys]));
 items.forEach((item, index) => {
   const article = document.createElement('article');
   article.className = `knowledge-card ${item.tone}`;
+  article.dataset.knowledgeKey=item.headline;
   article.innerHTML = `
     <div class="card-index"><span>${String(index + 1).padStart(2, '0')}</span><i></i><em>${item.topic}</em></div>
     <h2>${item.headline}</h2>
@@ -40,10 +43,11 @@ items.forEach((item, index) => {
   list.appendChild(article);
 });
 
-document.querySelectorAll('.toggle').forEach(button => button.addEventListener('click', () => {
+document.querySelectorAll('.toggle').forEach(button => {const key=button.closest('.knowledge-card').dataset.knowledgeKey;if(collectedKeys.has(key)){button.classList.add('selected');button.innerHTML='<span>✓</span> 已收录';}button.addEventListener('click', () => {
   const selected = button.classList.toggle('selected');
+  if(selected)collectedKeys.add(key);else collectedKeys.delete(key);saveCollected();
   button.innerHTML = selected ? '<span>✓</span> 已收录' : '<span>＋</span> 加入知识库';
-}));
+});});
 
 const drawer = document.querySelector('#drawer');
 const scrim = document.querySelector('#scrim');
@@ -61,8 +65,17 @@ document.querySelector('#readButton').addEventListener('click', () => {
   readButton.classList.add('is-read');
   readButton.disabled = true;
   list.classList.add('fade'); document.querySelector('.intro').classList.add('fade');
+  localStorage.setItem('pinmind.read.'+document.querySelector('.date').textContent,'1');
   setTimeout(() => { list.hidden = true; document.querySelector('.intro').hidden = true; document.querySelector('#emptyState').hidden = false; }, 180);
 });
+
+function applyReadState(){
+  const read=localStorage.getItem('pinmind.read.'+document.querySelector('.date').textContent)==='1',button=document.querySelector('#readButton');button.classList.toggle('is-read',read);button.disabled=read;
+  if(read){list.hidden=true;document.querySelector('.intro').hidden=true;document.querySelector('#emptyState').hidden=false;}
+  else{list.hidden=false;document.querySelector('.intro').hidden=false;document.querySelector('#emptyState').hidden=true;list.classList.remove('fade');document.querySelector('.intro').classList.remove('fade');}
+}
+window.applyReadState=applyReadState;
+applyReadState();
 
 
 const DAILY_TIME_KEY='pinmind.dailyTime';
