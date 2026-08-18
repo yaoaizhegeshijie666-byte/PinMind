@@ -1,6 +1,6 @@
 const pageHost = document.querySelector('#pageHost');
 const todayPage = document.querySelector('#todayPage');
-const searchInput = document.querySelector('.search input');
+const searchInputs = document.querySelectorAll('.search input');
 
 const pageTemplates = {
   library: `
@@ -66,7 +66,13 @@ document.querySelectorAll('.nav-item[data-page]').forEach(item => item.addEventL
   if(item.dataset.page==='today')resetTodayView();
   openPage(item.dataset.page);
 }));
-searchInput.addEventListener('keydown', event => { if (event.key === 'Enter' && searchInput.value.trim()) openPage('search', searchInput.value.trim()); });
+searchInputs.forEach(input=>input.addEventListener('keydown',event=>{if(event.key==='Enter'&&input.value.trim()){openPage('search',input.value.trim());document.querySelector('#mobileSearch').classList.remove('open');}}));
+const mobileSearchButton=document.querySelector('#mobileSearchButton');
+mobileSearchButton.addEventListener('click',()=>{
+  const search=document.querySelector('#mobileSearch');
+  search.classList.toggle('open');
+  if(search.classList.contains('open'))search.querySelector('input').focus();
+});
 const historyDigests={'8月17日':'为什么 AI 产品仍需保留人工确认','8月15日':'知识真正被使用，才完成了整理','8月12日':'好问题比更多功能更接近用户需求'};
 document.querySelectorAll('.history-item').forEach(item=>item.addEventListener('click',()=>{
   openPage('today');document.querySelectorAll('.history-item').forEach(row=>row.classList.toggle('current',row===item));
