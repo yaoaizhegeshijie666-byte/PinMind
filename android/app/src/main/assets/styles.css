@@ -26,6 +26,6 @@ main{height:100%;overflow-y:auto}
 .settings{flex:0 0 auto;margin-top:auto;border-top:1px solid var(--border);border-radius:0;padding-top:8px}
 .read-button{min-width:72px;min-height:40px;padding:0 18px;border:1px solid #37342f;border-radius:10px;background:var(--text);color:#fff;transition:background 140ms var(--ease),transform 140ms var(--ease)}
 .read-button:hover{background:#34312c;text-decoration:none;transform:translateY(-1px)}
-@media(max-width:767px){.app-shell{height:100vh;min-height:0}.sidebar{height:100vh}.mobile-bar{position:sticky;top:0;z-index:10}main{height:100vh}.read-button{min-width:68px;min-height:40px;padding:0 14px}}
+@media(max-width:767px){.app-shell{height:100vh;min-height:0}.sidebar{position:fixed;top:0;bottom:0;left:0;height:100vh}.mobile-bar{position:sticky;top:0;z-index:10}main{height:100vh}.read-button{min-width:68px;min-height:40px;padding:0 14px}}
 
 .read-button.is-read,.read-button.is-read:hover{border-color:#d2cec6;background:#dedbd4;color:#817c73;transform:none;cursor:default}

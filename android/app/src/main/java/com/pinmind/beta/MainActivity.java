@@ -37,7 +37,8 @@ public class MainActivity extends Activity {
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         WebView.setWebContentsDebuggingEnabled(true);
         statusView=new TextView(this);
-        statusView.setText("PinMind 0.3.8 · 正在检查页面布局…");
+        statusView.setText("PinMind 加载失败");
+        statusView.setVisibility(TextView.GONE);
         statusView.setTextColor(Color.rgb(91,86,78));
         statusView.setTextSize(12);
         statusView.setBackgroundColor(Color.rgb(247,246,242));
@@ -48,20 +49,16 @@ public class MainActivity extends Activity {
         root.addView(webView,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
         webView.setWebViewClient(new WebViewClient(){
             @Override public void onPageFinished(WebView view,String url){
-                String probe="(()=>{const e=document.querySelector('h1'),r=e&&e.getBoundingClientRect(),s=e&&getComputedStyle(e);return JSON.stringify({screen:[innerWidth,innerHeight],title:r&&[Math.round(r.x),Math.round(r.y),Math.round(r.width),Math.round(r.height)],display:s&&s.display,visibility:s&&s.visibility,opacity:s&&s.opacity,color:s&&s.color})})()";
-                view.evaluateJavascript(probe,value->{
-                    pageReady=true;
-                    statusView.setText("PinMind 0.3.8 · "+value);
-                    syncCaptures();
-                });
+                pageReady=true;
+                syncCaptures();
             }
             @Override public void onReceivedError(WebView view,WebResourceRequest request,WebResourceError error){
-                if(request.isForMainFrame())statusView.setText("PinMind 加载失败 · "+error.getDescription());
+                if(request.isForMainFrame()){statusView.setVisibility(TextView.VISIBLE);statusView.setText("PinMind 加载失败 · "+error.getDescription());}
             }
         });
         webView.setWebChromeClient(new WebChromeClient(){
             @Override public boolean onConsoleMessage(ConsoleMessage message){
-                if(message.messageLevel()==ConsoleMessage.MessageLevel.ERROR)statusView.setText("页面脚本错误 · "+message.message());
+                if(message.messageLevel()==ConsoleMessage.MessageLevel.ERROR){statusView.setVisibility(TextView.VISIBLE);statusView.setText("页面脚本错误 · "+message.message());}
                 return true;
             }
         });
@@ -74,7 +71,7 @@ public class MainActivity extends Activity {
             if(html.trim().isEmpty())throw new IllegalStateException("index.html 内容为空");
             webView.loadUrl("file:///android_asset/index.html");
         }catch(Exception error){
-            statusView.setText("PinMind 加载失败 · "+error.getClass().getSimpleName()+": "+error.getMessage());
+            statusView.setVisibility(TextView.VISIBLE);statusView.setText("PinMind 加载失败 · "+error.getClass().getSimpleName()+": "+error.getMessage());
         }
     }
     private void syncCaptures(){webView.evaluateJavascript("if(typeof syncNativeCaptures==='function')syncNativeCaptures()",null);}
