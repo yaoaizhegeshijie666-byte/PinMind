@@ -1,5 +1,5 @@
 const PinMindAPI={
-  get base(){return (localStorage.getItem('pinmind.apiBase')||'').replace(/\/$/,'')},
+  get base(){return (localStorage.getItem('pinmind.apiBase')||'https://pinmind-api.onrender.com').replace(/\/$/,'')},
   async request(path,options={}){if(!this.base)throw new Error('BACKEND_NOT_CONFIGURED');const response=await fetch(this.base+path,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});const data=await response.json();if(!response.ok)throw new Error(data.error||`HTTP_${response.status}`);return data},
   health(){return this.request('/health')},
   sources(){return this.request('/api/sources')},
