@@ -13,14 +13,16 @@ services:
     dockerContext: ./backend
     healthCheckPath: /health
     envVars:
-      - key: OPENAI_API_KEY
+      - key: OPENROUTER_API_KEY
         sync: false
+      - key: OPENROUTER_MODEL
+        value: "openai/gpt-4.1-mini"
       - key: DATABASE_URL
-      - key: PINMIND_UTC_OFFSET
-        value: "8"
         fromDatabase:
           name: pinmind-db
           property: connectionString
+      - key: PINMIND_UTC_OFFSET
+        value: "8"
       - key: PINMIND_DEVICE_TOKEN
         sync: false
       - key: PINMIND_CRON_SECRET

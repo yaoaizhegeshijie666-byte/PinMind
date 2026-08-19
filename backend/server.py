@@ -9,7 +9,7 @@ from urllib.error import HTTPError
 
 ROOT=Path(__file__).parent
 DB_PATH=Path(os.getenv('PINMIND_DB',ROOT/'pinmind.db'))
-MODEL=os.getenv('OPENAI_MODEL','gpt-5.6-terra')
+MODEL=os.getenv('OPENROUTER_MODEL','openai/gpt-4.1-mini')
 PORT=int(os.getenv('PORT','8787'))
 HOST=os.getenv('HOST','127.0.0.1')
 UTC_OFFSET_HOURS=int(os.getenv('PINMIND_UTC_OFFSET','8'))
@@ -77,23 +77,22 @@ SCHEMA={
 }
 
 def generate(items):
-    key=os.getenv('OPENAI_API_KEY')
-    if not key: raise RuntimeError('OPENAI_API_KEY_NOT_CONFIGURED')
+    key=os.getenv('OPENROUTER_API_KEY')
+    if not key: raise RuntimeError('OPENROUTER_API_KEY_NOT_CONFIGURED')
     source_text='\n\n'.join(f"SOURCE_ID: {x['id']}\nTITLE: {x['title']}\nCONTENT:\n{x['content'][:12000]}" for x in items)
     prompt='''你是 PinMind 知识编辑。直接表达知识，禁止使用“文章主要讲了”等转述开头。每条围绕一个核心问题，保留条件、机制、论据、案例和边界。只能引用给定 SOURCE_ID。输出中文。\n\n'''+source_text
-    payload={'model':MODEL,'reasoning':{'effort':'medium'},'input':prompt,'text':{'format':{'type':'json_schema','name':'pinmind_digest','strict':True,'schema':SCHEMA}}}
-    req=Request('https://api.openai.com/v1/responses',data=json.dumps(payload).encode(),headers={'Authorization':f'Bearer {key}','Content-Type':'application/json'})
+    payload={'model':MODEL,'messages':[{'role':'user','content':prompt}],'response_format':{'type':'json_schema','json_schema':{'name':'pinmind_digest','strict':True,'schema':SCHEMA}}}
+    headers={'Authorization':f'Bearer {key}','Content-Type':'application/json','HTTP-Referer':'https://github.com/yaoaizhegeshijie666-byte/PinMind','X-Title':'PinMind'}
+    req=Request('https://openrouter.ai/api/v1/chat/completions',data=json.dumps(payload).encode(),headers=headers)
     try:
         with urlopen(req,timeout=120) as response: data=json.load(response)
     except HTTPError as exc:
-        raise RuntimeError(f'OPENAI_{exc.code}: '+exc.read().decode()[:500])
-    texts=[]
-    for output in data.get('output',[]):
-        for content in output.get('content',[]):
-            if content.get('type')=='output_text': texts.append(content.get('text',''))
-    if not texts: raise RuntimeError('OPENAI_EMPTY_OUTPUT')
-    return json.loads(''.join(texts))
-
+        raise RuntimeError(f'OPENROUTER_{exc.code}: '+exc.read().decode()[:500])
+    choices=data.get('choices',[])
+    content=choices[0].get('message',{}).get('content','') if choices else ''
+    if isinstance(content,list): content=''.join(part.get('text','') for part in content if isinstance(part,dict))
+    if not content: raise RuntimeError('OPENROUTER_EMPTY_OUTPUT')
+    return json.loads(content)
 class Handler(BaseHTTPRequestHandler):
     def send_headers(self,status=200):
         self.send_response(status);self.send_header('Content-Type','application/json; charset=utf-8');self.send_header('Access-Control-Allow-Origin',os.getenv('PINMIND_CORS_ORIGIN','*'));self.send_header('Access-Control-Allow-Headers','Content-Type, Authorization');self.send_header('Access-Control-Allow-Methods','GET,POST,DELETE,OPTIONS');self.end_headers()
@@ -103,7 +102,7 @@ class Handler(BaseHTTPRequestHandler):
         length=int(self.headers.get('Content-Length','0'));return json.loads(self.rfile.read(length) or b'{}')
     def do_OPTIONS(self): self.send_headers(204)
     def do_GET(self):
-        if self.path=='/health': return self.send_json({'ok':True,'ai_configured':bool(os.getenv('OPENAI_API_KEY')),'model':MODEL})
+        if self.path=='/health': return self.send_json({'ok':True,'ai_configured':bool(os.getenv('OPENROUTER_API_KEY')),'provider':'openrouter','model':MODEL})
         if not authorized(self): return self.send_json({'error':'unauthorized'},401)
         if self.path.startswith('/api/sources'):
             with db() as conn: rows=conn.execute('SELECT * FROM sources ORDER BY captured_at DESC').fetchall()
