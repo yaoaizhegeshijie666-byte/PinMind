@@ -8,8 +8,10 @@ const DEMO=new Set(['AI 自动化程度越高，越需要保留用户的关键�
   const library=()=>readArray(KEYS.library);
   const uncollected=()=>readArray(KEYS.uncollected);
   const readDates=()=>new Set(readArray(KEYS.read));
+  const batchKey=(date,items=[])=>date+'::'+items.map(itemKey).filter(Boolean).sort().join('|');
+  const isDateRead=date=>[...readDates()].some(key=>key===date||key.startsWith(date+'::'));
   function isCollected(item){return collected().has(itemKey(item));}
-  function isRead(date){return readDates().has(date)||localStorage.getItem('pinmind.read.'+date)==='1';}
+  function isRead(date,items=[]){const key=items.length?batchKey(date,items):date;return readDates().has(key)||localStorage.getItem('pinmind.read.'+key)==='1';}
   function saveLibrary(item,on,date){
     const key=itemKey(item),items=library().filter(entry=>itemKey(entry)!==key);
     if(on)items.push({...item,digestDate:date});write(KEYS.library,items);
@@ -21,11 +23,11 @@ const DEMO=new Set(['AI 自动化程度越高，越需要保留用户的关键�
   function toggleCollected(item,date){
     const key=itemKey(item),keys=collected(),on=!keys.has(key);
     if(on)keys.add(key);else keys.delete(key);
-    write(KEYS.collected,[...keys]);saveLibrary(item,on,date);saveUncollected(item,!on&&isRead(date),date);
+    write(KEYS.collected,[...keys]);saveLibrary(item,on,date);saveUncollected(item,!on&&isDateRead(date),date);
     window.dispatchEvent(new CustomEvent('pinmind:knowledge-state-changed',{detail:{item,date,collected:on}}));return on;
   }
   function markRead(date,items){
-    const dates=readDates();dates.add(date);write(KEYS.read,[...dates]);localStorage.setItem('pinmind.read.'+date,'1');
+    const key=batchKey(date,items),dates=readDates();dates.add(key);write(KEYS.read,[...dates]);localStorage.setItem('pinmind.read.'+key,'1');
     items.forEach(item=>saveUncollected(item,!isCollected(item),date));
     window.dispatchEvent(new CustomEvent('pinmind:read-state-changed',{detail:{date}}));
   }

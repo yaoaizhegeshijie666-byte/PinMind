@@ -65,10 +65,10 @@ SECTION={'type':'object','additionalProperties':False,'required':['kind','title'
     'kind':{'type':'string','enum':['explanation','condition','mechanism','framework','evidence','example','boundary','implication']},
     'title':{'type':'string'},'content':{'type':'string'},'items':{'type':'array','items':{'type':'string'}}}}
 SCHEMA={'type':'object','additionalProperties':False,'required':['knowledge_items'],'properties':{'knowledge_items':{
-    'type':'array','maxItems':6,'items':{'type':'object','additionalProperties':False,
+    'type':'array','maxItems':10,'items':{'type':'object','additionalProperties':False,
     'required':['type','headline','sections','source_ids','related_knowledge_ids','topic_names','tags','content_completeness'],
     'properties':{'type':{'type':'string','enum':['viewpoint','method','trend','concept','case']},
-    'headline':{'type':'string','minLength':1},'sections':{'type':'array','minItems':1,'items':SECTION},
+    'headline':{'type':'string','minLength':1},'sections':{'type':'array','minItems':2,'maxItems':6,'items':SECTION},
     'source_ids':{'type':'array','minItems':1,'items':{'type':'string'}},
     'related_knowledge_ids':{'type':'array','items':{'type':'string'}},
     'topic_names':{'type':'array','minItems':1,'items':{'type':'string'}},
@@ -78,11 +78,45 @@ SCHEMA={'type':'object','additionalProperties':False,'required':['knowledge_item
 def ai_generate(sources,library):
     key=os.getenv('OPENROUTER_API_KEY')
     if not key:raise RuntimeError('OPENROUTER_API_KEY_NOT_CONFIGURED')
-    instructions='''你是 PinMind 知识编辑。只处理本批次“新来源”，生成通常约五条、最多六条可复用知识，不为凑数编造。直接写观点、方法、机制、证据或案例，禁止“文章主要讲了/作者介绍了”等转述开头。保留必要的前提、条件、论据、案例和边界。每条必须引用真实 SOURCE_ID；信息不足则不要生成。截图需要理解画面文字与结构。关联只能引用给定的正式知识 ID。输出中文。'''
+    instructions='''你是一名擅长制作高质量学习笔记的知识编辑。
+
+你的任务不是总结文章讲了什么，而是从内容中提取值得用户长期记忆、复习和再次使用的知识。
+
+请完整阅读输入内容，识别其中具有信息价值的：
+1. 明确观点或结论
+2. 事实、数字和研究结果
+3. 因果关系与运作机制
+4. 判断问题的框架
+5. 可执行的方法和步骤
+6. 案例及其证明的观点
+7. 结论成立的条件、限制和反例
+
+输出要求：
+- 每条知识必须可以脱离原文独立理解。
+- 直接陈述知识，不使用“文章主要讲了”“作者认为”“视频介绍了”等第三人称转述。
+- 不得把具体内容压缩成“某事很重要”“需要重视某事”等空泛结论。
+- 保留关键数字、条件、对象、步骤、因果关系和案例。
+- 不得为了简短而遗漏高价值内容。
+- 每条知识只表达一个主要问题，但可以包含支撑它的多个子知识点。
+- 内容复杂时使用分段、编号或项目符号。
+- 每个事实和观点必须能在原始内容中找到依据，不得补充原文没有提供的事实。
+- 内容不完整时必须明确标记，不得假装理解全文。
+- 知识点数量根据信息密度决定，不固定为三条或五条；信息充足时最多输出十张卡片。
+- 相同观点只保留信息最完整的一条。如果多个观点属于同一主题，将其组织成一张结构化知识卡片。
+
+工作顺序：先在内部提取完整候选知识，再去重和组卡，最后只输出最终知识卡，不输出分析过程。
+
+结构要求：
+- headline 写成可独立记忆的核心结论，不写主题名称或文章摘要。
+- 每张卡使用 2—6 个 sections。按内容选择“核心结论、事实与证据、因果机制、判断框架、方法步骤、案例、适用条件、限制与反例”等标题。
+- section.content 用完整句解释知识；section.items 放置可复习的数字、步骤、判断问题或对比项。
+- 像“AI 产品需要重视用户控制权”这种只有方向、没有条件和机制的表述不合格。合格知识必须说明自动化边界由哪些风险和可撤销性决定，并给出判断条件、操作节点或来源中的具体例子。
+- 上述 AI 示例仅用于说明知识密度，禁止把示例中的事实写入与其无关的来源。
+- 每条必须引用真实 SOURCE_ID；截图需要理解画面文字与结构；关联只能引用给定的正式知识 ID。输出中文并严格遵守 JSON Schema。'''
     blocks=[]
     for source in sources:
         text=(source.get('content') or '').strip()
-        blocks.append(f"SOURCE_ID: {source['id']}\nTYPE: {source['input_type']}\nTITLE: {source.get('title') or ''}\nCOMPLETENESS: {source.get('completeness') or 'complete'}\nTEXT:\n{text[:14000]}")
+        blocks.append(f"SOURCE_ID: {source['id']}\nTYPE: {source['input_type']}\nTITLE: {source.get('title') or ''}\nCOMPLETENESS: {source.get('completeness') or 'complete'}\nTEXT:\n{text[:min(30000,max(6000,70000//max(1,len(sources))))]}")
     related='\n'.join(f"{x['id']}: {x['headline']}" for x in library) or '无'
     content=[{'type':'text','text':instructions+'\n\n新来源：\n'+'\n\n'.join(blocks)+'\n\n可关联的正式知识：\n'+related}]
     for source in sources:
@@ -111,7 +145,7 @@ def validate_items(result,sources,library):
         item['source_ids']=refs;item['sections']=sections
         item['related_knowledge_ids']=[x for x in item.get('related_knowledge_ids',[]) if x in library_ids]
         valid.append(item)
-    return valid[:6]
+    return valid[:10]
 
 class Handler(BaseHTTPRequestHandler):
     def send_headers(self,status=200):

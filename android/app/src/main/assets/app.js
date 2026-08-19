@@ -15,7 +15,9 @@ window.dailyTimeReached=dailyTimeReached;window.showDigestWaiting=showDigestWait
     article.className=`knowledge-card ${item.tone||['orange','blue','mint'][index%3]}`;
     article.dataset.knowledgeKey=item.headline;
     const points=(item.points?.length?item.points:item.tags||[]).map(point=>`<li>${escapeHtml(point)}</li>`).join('');
-    article.innerHTML=`<div class="card-index"><span>${String(index+1).padStart(2,'0')}</span><i></i><em>${escapeHtml(item.topic||'今日知识')}</em></div><h2>${escapeHtml(item.headline)}</h2>${(item.paragraphs||[]).map(paragraph=>`<p>${escapeHtml(paragraph)}</p>`).join('')}<div class="framework"><h3>${escapeHtml(item.title||'核心内容')}</h3><ol>${points}</ol></div><footer><a class="source-direct" href="${escapeHtml(safeUrl(item.url))}">来源：${escapeHtml(item.source||'PinMind AI 整理')} ↗</a><button class="toggle${selected?' selected':''}"><span>${selected?'✓':'＋'}</span> ${selected?'已收录':'加入知识库'}</button></footer>`;
+    const sections=item.sections?.length?item.sections:[{title:item.title||'核心内容',content:(item.paragraphs||[]).join(' '),items:item.points||item.tags||[]}];
+    const sectionHtml=sections.map(section=>`<div class="framework knowledge-section"><h3>${escapeHtml(section.title||'知识要点')}</h3>${section.content?`<p>${escapeHtml(section.content)}</p>`:''}${section.items?.length?`<ol>${section.items.map(point=>`<li>${escapeHtml(point)}</li>`).join('')}</ol>`:''}</div>`).join('');
+    article.innerHTML=`<div class="card-index"><span>${String(index+1).padStart(2,'0')}</span><i></i><em>${escapeHtml(item.topic||'今日知识')}</em></div><h2>${escapeHtml(item.headline)}</h2>${sectionHtml}<footer><a class="source-direct" href="${escapeHtml(safeUrl(item.url))}">来源：${escapeHtml(item.source||'PinMind AI 整理')} ↗</a><button class="toggle${selected?' selected':''}"><span>${selected?'✓':'＋'}</span> ${selected?'已收录':'加入知识库'}</button></footer>`;
     article.querySelector('.toggle').addEventListener('click',event=>{const button=event.currentTarget,on=PinMindState.toggleCollected(item,window.currentDigestDate);button.classList.toggle('selected',on);button.innerHTML=on?'<span>✓</span> 已收录':'<span>＋</span> 加入知识库';});
     list.appendChild(article);
   });
@@ -43,7 +45,7 @@ document.querySelector('#readButton').addEventListener('click', () => {
 });
 
 function applyReadState(){
-  const read=PinMindState.isRead(window.currentDigestDate),button=document.querySelector('#readButton');button.classList.toggle('is-read',read);button.disabled=read;
+  const read=PinMindState.isRead(window.currentDigestDate,window.currentKnowledgeItems),button=document.querySelector('#readButton');button.classList.toggle('is-read',read);button.disabled=read;
   if(read){list.hidden=true;document.querySelector('.intro').hidden=true;document.querySelector('#emptyState').hidden=false;}
   else{list.hidden=false;document.querySelector('.intro').hidden=false;document.querySelector('#emptyState').hidden=true;list.classList.remove('fade');document.querySelector('.intro').classList.remove('fade');}
 }
