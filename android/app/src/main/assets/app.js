@@ -33,8 +33,9 @@ window.currentKnowledgeItems=[];window.viewingToday=true;
 const safeUrl=value=>/^https?:\/\//i.test(value||'')?value:'#';
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 function dailyTimeReached(){const now=new Date(),time=localStorage.getItem('pinmind.dailyTime')||'22:00';return now.toTimeString().slice(0,5)>=time;}
-function showDigestWaiting(){const time=localStorage.getItem('pinmind.dailyTime')||'22:00';window.currentKnowledgeItems=[];window.viewingToday=true;list.hidden=false;list.innerHTML=`<section class="empty-state"><span>◷</span><h2>今日知识将在 ${time} 生成</h2><p>你可以继续收集内容，PinMind 会在设定时间统一整理。</p></section>`;const intro=document.querySelector('.intro p');if(intro)intro.textContent=`今日知识尚未生成，将在 ${time} 为你整理。`;const button=document.querySelector('#readButton');if(button)button.hidden=true;}
-window.dailyTimeReached=dailyTimeReached;window.showDigestWaiting=showDigestWaiting;function renderKnowledgeItems(knowledgeItems,digestDate=window.currentDigestDate){
+function showDigestState(title,message){window.currentKnowledgeItems=[];window.viewingToday=true;list.hidden=false;list.innerHTML=`<section class="empty-state"><span>◷</span><h2>${escapeHtml(title)}</h2><p>${escapeHtml(message)}</p></section>`;const intro=document.querySelector('.intro p');if(intro)intro.textContent=message;const button=document.querySelector('#readButton');if(button)button.hidden=true;}
+function showDigestWaiting(){const time=localStorage.getItem('pinmind.dailyTime')||'22:00';if(dailyTimeReached())showDigestState('正在整理今日知识','只会整理上次生成后新保存的链接、文字和截图。');else showDigestState(`今日知识将在 ${time} 生成`,`你可以继续收集内容，PinMind 会在 ${time} 统一整理。`);}
+window.dailyTimeReached=dailyTimeReached;window.showDigestWaiting=showDigestWaiting;window.showDigestState=showDigestState;function renderKnowledgeItems(knowledgeItems,digestDate=window.currentDigestDate){
   window.currentDigestDate=digestDate;window.currentKnowledgeItems=knowledgeItems;const readButton=document.querySelector('#readButton');if(readButton)readButton.hidden=false;
   list.innerHTML='';
   knowledgeItems.forEach((item,index)=>{
@@ -48,7 +49,7 @@ window.dailyTimeReached=dailyTimeReached;window.showDigestWaiting=showDigestWait
   });
 }
 list.addEventListener('click',event=>{const link=event.target.closest('.source-direct');if(!link)return;event.preventDefault();const url=link.getAttribute('href');if(!url||url==='#')return;window.PinMindNative?.openUrl?.(url);if(!window.PinMindNative)window.open(url,'_blank');});window.renderKnowledgeItems=renderKnowledgeItems;
-if(dailyTimeReached())renderKnowledgeItems(items);else showDigestWaiting();
+showDigestWaiting();
 const drawer = document.querySelector('#drawer');
 const scrim = document.querySelector('#scrim');
 const setDrawer = open => {

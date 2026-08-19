@@ -12,18 +12,19 @@ async function syncNativeCaptures(){
   let captures=[];try{captures=JSON.parse(window.PinMindNative.getCaptures()||'[]')}catch{return}
   let synced=0;for(const item of captures){try{await PinMindAPI.capture(item);synced++}catch(error){console.warn('PinMind capture sync deferred',error.message);break}}
   if(synced===captures.length&&captures.length){window.PinMindNative.clearCaptures();window.dispatchEvent(new CustomEvent('pinmind:sources-updated'));}
+  return synced;
 }
 async function loadLiveDigest(){
   if(!PinMindAPI.base||!window.renderKnowledgeItems)return;
   try{
     const [data,sourceData]=await Promise.all([PinMindAPI.today(),PinMindAPI.sources().catch(()=>({sources:[]}))]);
     if(window.viewingToday===false)return;
-    const now=new Date(),today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');if(data.digest_date===today&&!window.dailyTimeReached?.()){window.showDigestWaiting?.();return;}if(!data.knowledge_items?.length){window.showDigestWaiting?.();return;}
+    const now=new Date(),today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');if(data.digest_date===today&&!window.dailyTimeReached?.()){window.showDigestWaiting?.();return;}if(!data.knowledge_items?.length){window.showDigestState?.('今天没有可生成的知识','上次生成后没有新增的有效链接、文字或截图。');return;}
     const sources=new Map((sourceData.sources||[]).map(source=>[source.id,source]));
     const tones=['orange','blue','mint'];
     const liveItems=data.knowledge_items.map((item,index)=>{
       const source=sources.get(item.source_ids?.[0]);
-      return {tone:tones[index%tones.length],topic:item.topic_names?.[0]||'今日知识',headline:item.headline,paragraphs:(item.sections||[]).map(section=>section.content).filter(Boolean),title:'核心内容',points:item.tags||[],source:source?.title||'PinMind AI 整理',url:source?.url||'#'};
+      const sections=item.sections||[],framework=sections.find(section=>section.items?.length)||sections.find(section=>section.title);const points=sections.flatMap(section=>section.items||[]);return {id:item.id,tone:tones[index%tones.length],type:item.type,topic:item.topic_names?.[0]||'今日知识',headline:item.headline,paragraphs:sections.map(section=>section.content).filter(Boolean),title:framework?.title||'核心内容',points:points.length?points:(item.tags||[]),tags:item.tags||[],sourceIds:item.source_ids||[],completeness:item.content_completeness||'complete',source:source?.title||'原始来源',url:source?.url||'#'};
     });
     window.renderKnowledgeItems(liveItems,data.digest_date);
     const intro=document.querySelector('.intro p');if(intro)intro.textContent='从你今天捕捉的内容中，PinMind 整理了 '+liveItems.length+' 条值得留下的知识。';
@@ -31,9 +32,16 @@ async function loadLiveDigest(){
     document.querySelector('.date').textContent=`${date.getMonth()+1}月${date.getDate()}日 · ${weekdays[date.getDay()]}`;
     window.applyReadState?.();
     window.dispatchEvent(new CustomEvent('pinmind:digest-loaded',{detail:{items:liveItems,date:data.digest_date}}));
-  }catch(error){console.warn('PinMind digest offline',error.message)}
+  }catch(error){console.warn('PinMind digest offline',error.message);window.showDigestState?.('今日知识加载失败','请检查网络或稍后重新打开 PinMind。')}
 }
 window.loadLiveDigest=loadLiveDigest;
+async function refreshDailyDigest(){
+  if(!window.dailyTimeReached?.()){window.showDigestWaiting?.();return;}
+  window.showDigestState?.('正在整理今日知识','正在读取上次生成后新增的链接、文字和截图。');
+  try{await PinMindAPI.generate()}catch(error){if(!['no_new_ready_sources','no_supported_knowledge'].includes(error.message))console.warn('PinMind generation deferred',error.message)}
+  await loadLiveDigest();
+}
+window.refreshDailyDigest=refreshDailyDigest;
 const clipboardUrl=text=>String(text||'').match(/https?:\/\/[^\s]+/i)?.[0]?.replace(/[，。；、）】》]+$/,'')||'';
 async function clipboardText(){if(window.PinMindNative?.getClipboardText)return window.PinMindNative.getClipboardText();try{return await navigator.clipboard.readText()}catch{return''}}
 function showClipboardPrompt(url){
@@ -43,5 +51,5 @@ function showClipboardPrompt(url){
 }
 async function checkClipboardLink(force=false){if(!force&&!window.PinMindNative?.getClipboardText)return;const url=clipboardUrl(await clipboardText());if(!url){if(force){const button=document.querySelector('#pasteLinkButton');if(button){button.textContent='剪贴板中没有链接';setTimeout(()=>button.textContent='粘贴链接',1200)}}return;}if(!force&&localStorage.getItem('pinmind.lastClipboardLink')===url)return;showClipboardPrompt(url);}
 window.checkClipboardLink=checkClipboardLink;
-window.addEventListener('pinmind:daily-refresh',()=>loadLiveDigest());
-window.addEventListener('DOMContentLoaded',()=>{syncNativeCaptures();loadLiveDigest();setTimeout(()=>checkClipboardLink(),900);document.querySelector('#pasteLinkButton')?.addEventListener('click',()=>checkClipboardLink(true));});
+window.addEventListener('pinmind:daily-refresh',refreshDailyDigest);
+window.addEventListener('DOMContentLoaded',async()=>{await syncNativeCaptures();if(window.dailyTimeReached?.())await refreshDailyDigest();else await loadLiveDigest();setTimeout(()=>checkClipboardLink(),900);document.querySelector('#pasteLinkButton')?.addEventListener('click',()=>checkClipboardLink(true));});

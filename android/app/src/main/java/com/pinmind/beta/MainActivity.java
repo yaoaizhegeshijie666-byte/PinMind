@@ -10,7 +10,10 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.util.Base64;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -27,6 +30,8 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.Scanner;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.util.Set;
 
 public class MainActivity extends Activity {
@@ -98,15 +103,29 @@ public class MainActivity extends Activity {
     public class NativeBridge {
         @JavascriptInterface public String getCaptures(){
             JSONArray result=new JSONArray();Set<String> rows=getSharedPreferences("pinmind_sources",MODE_PRIVATE).getStringSet("captures",null);if(rows==null)return result.toString();
-            for(String row:rows){try{String[] p=row.split("\\t",-1);JSONObject item=new JSONObject();String mime=p.length>1?p[1]:"text/plain";String text=p.length>3?p[3]:"";String streams=p.length>4?p[4]:"";item.put("input_type",mime.startsWith("image/")?"screenshot":"selected_text");item.put("title",p.length>2?p[2]:"");item.put("content",text.isEmpty()?streams:text);String url=findUrl(text);if(!url.isEmpty())item.put("url",url);result.put(item);}catch(Exception ignored){}}
+            for(String row:rows){try{String[] p=row.split("\\t",-1);JSONObject item=new JSONObject();String mime=p.length>1?p[1]:"text/plain";String text=p.length>3?p[3]:"";String files=p.length>4?p[4]:"";boolean image=mime.startsWith("image/");item.put("input_type",image?"screenshot":"selected_text");item.put("title",p.length>2?p[2]:"");item.put("content",text);if(image){String encoded=encodeImage(files);if(!encoded.isEmpty()){item.put("image_data",encoded);item.put("content_mime","image/jpeg");}}String url=findUrl(text);if(!url.isEmpty())item.put("url",url);result.put(item);}catch(Exception ignored){}}
             return result.toString();
         }
-        @JavascriptInterface public void clearCaptures(){getSharedPreferences("pinmind_sources",MODE_PRIVATE).edit().remove("captures").apply();}
+        @JavascriptInterface public void clearCaptures(){deleteCaptureFiles();getSharedPreferences("pinmind_sources",MODE_PRIVATE).edit().remove("captures").apply();}
         @JavascriptInterface public String getClipboardText(){try{ClipboardManager clipboard=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);if(clipboard==null||!clipboard.hasPrimaryClip())return "";ClipData clip=clipboard.getPrimaryClip();if(clip==null||clip.getItemCount()==0)return "";CharSequence text=clip.getItemAt(0).coerceToText(MainActivity.this);return text==null?"":text.toString();}catch(Exception ignored){return "";}}
         @JavascriptInterface public void setApiBase(String value){getSharedPreferences("pinmind_config",MODE_PRIVATE).edit().putString("api_base",value).apply();}
         @JavascriptInterface public void setDailyTime(String value){runOnUiThread(()->DailyNotification.schedule(MainActivity.this,value));}
         @JavascriptInterface public void setNotificationsEnabled(boolean enabled){getSharedPreferences("pinmind_config",MODE_PRIVATE).edit().putBoolean("notifications_enabled",enabled).apply();runOnUiThread(()->DailyNotification.schedule(MainActivity.this,getSharedPreferences("pinmind_config",MODE_PRIVATE).getString("daily_time","22:00")));}
         @JavascriptInterface public void openUrl(String value){runOnUiThread(()->openExternal(Uri.parse(value)));}
-        private String findUrl(String text){for(String part:text.split("\\s+"))if(part.startsWith("http://")||part.startsWith("https://"))return part;return "";}
+        private String encodeImage(String paths){
+            String path=paths==null?"":paths.split("\\|",2)[0];File file=new File(path);if(!file.isFile())return "";
+            try{
+                BitmapFactory.Options bounds=new BitmapFactory.Options();bounds.inJustDecodeBounds=true;BitmapFactory.decodeFile(path,bounds);
+                int sample=1;while(bounds.outWidth/sample>1800||bounds.outHeight/sample>1800)sample*=2;
+                BitmapFactory.Options options=new BitmapFactory.Options();options.inSampleSize=sample;Bitmap bitmap=BitmapFactory.decodeFile(path,options);if(bitmap==null)return "";
+                ByteArrayOutputStream output=new ByteArrayOutputStream();bitmap.compress(Bitmap.CompressFormat.JPEG,82,output);bitmap.recycle();
+                return Base64.encodeToString(output.toByteArray(),Base64.NO_WRAP);
+            }catch(Exception ignored){return "";}
+        }
+        private void deleteCaptureFiles(){
+            Set<String> rows=getSharedPreferences("pinmind_sources",MODE_PRIVATE).getStringSet("captures",null);if(rows==null)return;
+            String root=new File(getFilesDir(),"captures").getAbsolutePath();
+            for(String row:rows){String[] parts=row.split("\\t",-1);if(parts.length<5)continue;for(String path:parts[4].split("\\|")){File file=new File(path);if(file.getAbsolutePath().startsWith(root))file.delete();}}
+        }        private String findUrl(String text){for(String part:text.split("\\s+"))if(part.startsWith("http://")||part.startsWith("https://"))return part;return "";}
     }
 }

@@ -7,8 +7,10 @@ services:
     dockerContext: ./backend
     healthCheckPath: /health
     envVars:
-      - key: OPENAI_API_KEY
+      - key: OPENROUTER_API_KEY
         sync: false
+      - key: OPENROUTER_MODEL
+        value: "openai/gpt-4.1-mini"
       - key: DATABASE_URL
         sync: false
       - key: PINMIND_DEVICE_TOKEN
