@@ -14,6 +14,22 @@ async function syncNativeCaptures(){
   if(synced===captures.length&&captures.length){window.PinMindNative.clearCaptures();window.dispatchEvent(new CustomEvent('pinmind:sources-updated'));}
 }
 async function loadLiveDigest(){
-  if(!PinMindAPI.base)return;try{const data=await PinMindAPI.today();if(!data.knowledge_items?.length)return;const cards=document.querySelectorAll('.knowledge-card');data.knowledge_items.slice(0,cards.length).forEach((item,index)=>{cards[index].querySelector('h2').textContent=item.headline;const paragraph=cards[index].querySelector(':scope > p');if(paragraph)paragraph.textContent=item.sections?.[0]?.content||'';});}catch(error){console.warn('PinMind digest offline',error.message)}
+  if(!PinMindAPI.base||!window.renderKnowledgeItems)return;
+  try{
+    const [data,sourceData]=await Promise.all([PinMindAPI.today(),PinMindAPI.sources().catch(()=>({sources:[]}))]);
+    if(!data.knowledge_items?.length)return;
+    const sources=new Map((sourceData.sources||[]).map(source=>[source.id,source]));
+    const tones=['orange','blue','mint'];
+    const liveItems=data.knowledge_items.map((item,index)=>{
+      const source=sources.get(item.source_ids?.[0]);
+      return {tone:tones[index%tones.length],topic:item.topic_names?.[0]||'今日知识',headline:item.headline,paragraphs:(item.sections||[]).map(section=>section.content).filter(Boolean),title:'核心内容',points:item.tags||[],source:source?.title||'PinMind AI 整理',url:source?.url||'#'};
+    });
+    window.renderKnowledgeItems(liveItems);
+    const date=new Date(`${data.digest_date}T00:00:00+08:00`),weekdays=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+    document.querySelector('.date').textContent=`${date.getMonth()+1}月${date.getDate()}日 · ${weekdays[date.getDay()]}`;
+    window.applyReadState?.();
+    window.dispatchEvent(new CustomEvent('pinmind:digest-loaded',{detail:{items:liveItems,date:data.digest_date}}));
+  }catch(error){console.warn('PinMind digest offline',error.message)}
 }
+window.loadLiveDigest=loadLiveDigest;
 window.addEventListener('DOMContentLoaded',()=>{syncNativeCaptures();loadLiveDigest()});

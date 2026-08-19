@@ -101,6 +101,7 @@ const todayDefault={
   date:document.querySelector('.date').textContent,
   headline:document.querySelector('.knowledge-card h2').textContent
 };
+window.addEventListener('pinmind:digest-loaded',event=>{todayDefault.date=document.querySelector('.date').textContent;todayDefault.headline=event.detail.items[0]?.headline||todayDefault.headline;});
 document.querySelectorAll('.history-item').forEach(item=>item.classList.remove('current'));
 const historyKnowledgeCount=document.querySelectorAll('.knowledge-card').length;
 document.querySelectorAll('.history-item em').forEach(item=>item.textContent=`${historyKnowledgeCount} 条知识`);
@@ -111,7 +112,7 @@ function resetTodayView(){
   document.querySelector('.knowledge-card h2').textContent=todayDefault.headline;
 }
 document.querySelectorAll('.nav-item[data-page]').forEach(item => item.addEventListener('click', () => {
-  if(item.dataset.page==='today')resetTodayView();
+  if(item.dataset.page==='today'){resetTodayView();window.loadLiveDigest?.();}
   window.applyReadState?.();
   openPage(item.dataset.page);
 }));

@@ -33,26 +33,22 @@ const libraryItems=()=>JSON.parse(localStorage.getItem('pinmind.libraryItems')||
 function saveLibraryItem(item,selected){const saved=libraryItems().filter(entry=>entry.headline!==item.headline);if(selected)saved.push(item);localStorage.setItem('pinmind.libraryItems',JSON.stringify(saved));window.dispatchEvent(new CustomEvent('pinmind:library-updated'));}
 window.saveLibraryItem=saveLibraryItem;
 items.filter(item=>collectedKeys.has(item.headline)&&!libraryItems().some(saved=>saved.headline===item.headline)).forEach(item=>saveLibraryItem(item,true));
-items.forEach((item, index) => {
-  const article = document.createElement('article');
-  article.className = `knowledge-card ${item.tone}`;
-  article.dataset.knowledgeKey=item.headline;
-  article.innerHTML = `
-    <div class="card-index"><span>${String(index + 1).padStart(2, '0')}</span><i></i><em>${item.topic}</em></div>
-    <h2>${item.headline}</h2>
-    ${item.paragraphs.map(p => `<p>${p}</p>`).join('')}
-    <div class="framework"><h3>${item.title}</h3><ol>${item.points.map(p => `<li>${p}</li>`).join('')}</ol></div>
-    ${item.related ? `<button class="related"><span>↗</span><span><small>关联知识</small>${item.related}</span></button>` : ''}
-    <footer><a class="source-direct" href="${item.url}">来源：${item.source} ↗</a><button class="toggle"><span>＋</span> 加入知识库</button></footer>`;
-  list.appendChild(article);
-});
-
-document.querySelectorAll('.toggle').forEach(button => {const key=button.closest('.knowledge-card').dataset.knowledgeKey;if(collectedKeys.has(key)){button.classList.add('selected');button.innerHTML='<span>✓</span> 已收录';}button.addEventListener('click', () => {
-  const selected = button.classList.toggle('selected');
-  if(selected)collectedKeys.add(key);else collectedKeys.delete(key);saveCollected();saveLibraryItem(items.find(entry=>entry.headline===key),selected);
-  button.innerHTML = selected ? '<span>✓</span> 已收录' : '<span>＋</span> 加入知识库';
-});});
-
+const safeUrl=value=>/^https?:\/\//i.test(value||'')?value:'#';
+const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+function renderKnowledgeItems(knowledgeItems){
+  list.innerHTML='';
+  knowledgeItems.forEach((item,index)=>{
+    const article=document.createElement('article'),selected=collectedKeys.has(item.headline);
+    article.className=`knowledge-card ${item.tone||['orange','blue','mint'][index%3]}`;
+    article.dataset.knowledgeKey=item.headline;
+    const points=(item.points?.length?item.points:item.tags||[]).map(point=>`<li>${escapeHtml(point)}</li>`).join('');
+    article.innerHTML=`<div class="card-index"><span>${String(index+1).padStart(2,'0')}</span><i></i><em>${escapeHtml(item.topic||'今日知识')}</em></div><h2>${escapeHtml(item.headline)}</h2>${(item.paragraphs||[]).map(paragraph=>`<p>${escapeHtml(paragraph)}</p>`).join('')}<div class="framework"><h3>${escapeHtml(item.title||'核心内容')}</h3><ol>${points}</ol></div><footer><a class="source-direct" href="${escapeHtml(safeUrl(item.url))}">来源：${escapeHtml(item.source||'PinMind AI 整理')} ↗</a><button class="toggle${selected?' selected':''}"><span>${selected?'✓':'＋'}</span> ${selected?'已收录':'加入知识库'}</button></footer>`;
+    article.querySelector('.toggle').addEventListener('click',event=>{const button=event.currentTarget,on=button.classList.toggle('selected');if(on)collectedKeys.add(item.headline);else collectedKeys.delete(item.headline);saveCollected();saveLibraryItem(item,on);button.innerHTML=on?'<span>✓</span> 已收录':'<span>＋</span> 加入知识库';});
+    list.appendChild(article);
+  });
+}
+window.renderKnowledgeItems=renderKnowledgeItems;
+renderKnowledgeItems(items);
 const drawer = document.querySelector('#drawer');
 const scrim = document.querySelector('#scrim');
 const setDrawer = open => {
