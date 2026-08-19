@@ -13,6 +13,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -34,6 +35,7 @@ public class MainActivity extends Activity {
     private boolean pageReady;
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        configureSystemBars();
         DailyNotification.schedule(this,getSharedPreferences("pinmind_config",MODE_PRIVATE).getString("daily_time","22:00"));
         if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},2200);
         webView=new WebView(this);
@@ -83,6 +85,14 @@ public class MainActivity extends Activity {
     }
     private void syncCaptures(){webView.evaluateJavascript("if(typeof syncNativeCaptures==='function')syncNativeCaptures()",null);}
     private boolean openExternal(Uri uri){if(uri==null||!("http".equals(uri.getScheme())||"https".equals(uri.getScheme())))return false;try{startActivity(new Intent(Intent.ACTION_VIEW,uri));return true;}catch(Exception ignored){return false;}}
+    private void configureSystemBars(){
+        Window window=getWindow();int background=Color.rgb(247,246,242);
+        window.setStatusBarColor(background);window.setNavigationBarColor(background);
+        int flags=View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;if(Build.VERSION.SDK_INT>=26)flags|=View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        window.getDecorView().setSystemUiVisibility(flags);
+        if(Build.VERSION.SDK_INT>=29){window.setStatusBarContrastEnforced(false);window.setNavigationBarContrastEnforced(false);}
+        if(Build.VERSION.SDK_INT>=30)window.setDecorFitsSystemWindows(true);
+    }
     @Override protected void onResume(){super.onResume();if(pageReady){syncCaptures();webView.evaluateJavascript("if(typeof checkClipboardLink==='function')checkClipboardLink()",null);}}
     @Override public void onBackPressed(){if(webView.canGoBack())webView.goBack();else super.onBackPressed();}
     public class NativeBridge {
