@@ -74,17 +74,30 @@ function saveSet(key,set){localStorage.setItem(key,JSON.stringify([...set]));}
 function restorePageState(){const deleted=storedSet('pinmind.deleted');pageHost.querySelectorAll('.knowledge-module').forEach(card=>{const key=card.dataset.id||card.querySelector('h3')?.textContent||'';if(deleted.has('module:'+key))card.remove();});}
 
 function savedLibraryItems(){return PinMindState.library();}
+function ensureThemeCluster(topic){
+  const view=pageHost.querySelector('#boardView');let cluster=[...view.querySelectorAll('.cluster')].find(item=>item.querySelector('.cluster-title span')?.textContent===topic);
+  if(cluster)return cluster;
+  cluster=document.createElement('section');cluster.className='cluster dynamic-cluster';cluster.innerHTML='<div class="cluster-title"><span></span><small>0 条知识</small></div><div class="draggable-board"></div>';cluster.querySelector('.cluster-title span').textContent=topic;view.appendChild(cluster);return cluster;
+}
+function refreshThemeOptions(){
+  const clusters=[...pageHost.querySelectorAll('#boardView .cluster')];
+  clusters.forEach(cluster=>{const topic=cluster.querySelector('.cluster-title span')?.textContent||'未分类';cluster.dataset.theme=topic;cluster.querySelectorAll('.knowledge-module').forEach(card=>card.dataset.theme=topic);const count=cluster.querySelectorAll('.knowledge-module').length;const label=cluster.querySelector('.cluster-title small');if(label)label.textContent=`${count} 条知识`;});
+  const topics=[...new Set(clusters.filter(cluster=>cluster.querySelector('.knowledge-module')).map(cluster=>cluster.dataset.theme))];
+  pageHost.querySelectorAll('.graph-node:not(.hub)').forEach(node=>{const label=node.childNodes[0]?.textContent?.trim()||'';if(topics.includes(label))node.dataset.theme=label;});
+  const menu=pageHost.querySelector('[data-filter-menu="theme"]');if(!menu)return;menu.innerHTML='';
+  [['all','全部主题'],...topics.map(topic=>[topic,topic])].forEach(([value,label])=>{const button=document.createElement('button');button.dataset.value=value;button.textContent=label;menu.appendChild(button);});
+}
 function renderSavedLibraryItems(){
   if(!pageHost.querySelector('#boardView'))return;
-  const board=pageHost.querySelector('.orange-cluster .draggable-board'),note=pageHost.querySelector('.markdown-document'),canvas=pageHost.querySelector('#graphCanvas');
+  const note=pageHost.querySelector('.markdown-document'),canvas=pageHost.querySelector('#graphCanvas');
   savedLibraryItems().forEach((item,index)=>{
-    if(![...board.querySelectorAll('h3')].some(title=>title.textContent===item.headline))board.insertAdjacentHTML('beforeend',`<article class="knowledge-module" draggable="true" data-saved="true"><button class="module-delete" aria-label="删除">×</button><span>${item.topic||'新增知识'}</span><h3>${item.headline}</h3><small>已加入知识库</small></article>`);
-    if(![...note.querySelectorAll('h2')].some(title=>title.textContent===item.headline))note.insertAdjacentHTML('beforeend',`<section data-saved="true"><h2>${item.headline}</h2><p>${item.paragraphs?.[0]||item.summary||''}</p></section>`);
-    if(![...canvas.querySelectorAll('.graph-node')].some(node=>node.textContent===item.headline))canvas.insertAdjacentHTML('beforeend',`<button class="graph-node leaf" data-connect="hub" style="left:${18+(index%4)*20}%;top:${84-(index%2)*12}%">${item.headline}</button>`);
+    const topic=item.topic||'未分类',cluster=ensureThemeCluster(topic),board=cluster.querySelector('.draggable-board');
+    if(![...board.querySelectorAll('h3')].some(title=>title.textContent===item.headline)){const card=document.createElement('article');card.className='knowledge-module';card.draggable=true;card.dataset.saved='true';card.innerHTML='<button class="module-delete" aria-label="删除">×</button><span></span><h3></h3><small>已加入知识库</small>';card.querySelector('span').textContent=topic;card.querySelector('h3').textContent=item.headline;board.appendChild(card);}
+    if(![...note.querySelectorAll('h2')].some(title=>title.textContent===item.headline)){const section=document.createElement('section');section.dataset.saved='true';section.innerHTML='<h2></h2><p></p>';section.querySelector('h2').textContent=item.headline;section.querySelector('p').textContent=item.paragraphs?.[0]||item.summary||'';note.appendChild(section);}
+    if(![...canvas.querySelectorAll('.graph-node')].some(node=>node.textContent===item.headline)){const node=document.createElement('button');node.className='graph-node leaf';node.dataset.connect='hub';node.dataset.theme=topic;node.style.left=`${18+(index%4)*20}%`;node.style.top=`${84-(index%2)*12}%`;node.textContent=item.headline;canvas.appendChild(node);}
   });
-  const hub=canvas.querySelector('.hub small');if(hub)hub.textContent=`${pageHost.querySelectorAll('.knowledge-module').length} 条知识`;updateGraphEdges();
-}
-function renderUncollectedItems(){
+  refreshThemeOptions();const hub=canvas.querySelector('.hub small');if(hub)hub.textContent=`${pageHost.querySelectorAll('.knowledge-module').length} 条知识`;updateGraphEdges();
+}function renderUncollectedItems(){
   const list=pageHost.querySelector('.uncollected-full-list');if(!list)return;list.innerHTML='';
   const entries=PinMindState.uncollected();
   if(!entries.length){list.innerHTML='<article class="uncollected-card"><h2>暂无未收录知识</h2><p>已阅时未加入知识库的内容会出现在这里。</p></article>';return;}
@@ -220,7 +233,7 @@ pageHost.addEventListener('click',event=>{
   if(toggle){event.stopPropagation();const menu=pageHost.querySelector(`[data-filter-menu="${toggle.dataset.filterToggle}"]`);pageHost.querySelectorAll('.filter-menu').forEach(item=>{if(item!==menu)item.classList.remove('open')});menu.classList.toggle('open');return;}
   const option=event.target.closest('[data-filter-menu] [data-value]');
   if(option){event.stopPropagation();const menu=option.closest('.filter-menu');const type=menu.dataset.filterMenu;const trigger=pageHost.querySelector(`[data-filter-toggle="${type}"]`);trigger.textContent=option.textContent;menu.classList.remove('open');
-    if(type==='theme'){pageHost.querySelectorAll('.cluster').forEach(cluster=>cluster.hidden=option.dataset.value!=='all'&&!cluster.classList.contains(option.dataset.value+'-cluster'));pageHost.querySelectorAll('.graph-node:not(.hub)').forEach(node=>node.hidden=option.dataset.value!=='all'&&!node.classList.contains(option.dataset.value+'-node'));updateGraphEdges();}
+    if(type==='theme'){pageHost.querySelectorAll('.cluster').forEach(cluster=>cluster.hidden=option.dataset.value!=='all'&&cluster.dataset.theme!==option.dataset.value);pageHost.querySelectorAll('.graph-node:not(.hub)').forEach(node=>node.hidden=option.dataset.value!=='all'&&node.dataset.theme!==option.dataset.value);updateGraphEdges();}
     if(type==='time'){pageHost.querySelectorAll('.knowledge-module').forEach(card=>card.hidden=option.dataset.value==='7'&&(/8月(7|8|10)日/.test(card.textContent)));}
     return;
   }

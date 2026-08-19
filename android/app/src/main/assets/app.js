@@ -83,3 +83,9 @@ function updateDailySchedule(){
 }
 updateDailySchedule();setInterval(updateDailySchedule,60000);
 
+
+const splashStarted=Date.now();
+function dismissSplash(){const splash=document.querySelector('#appSplash');if(!splash||splash.classList.contains('hidden'))return;const delay=Math.max(0,700-(Date.now()-splashStarted));setTimeout(()=>{splash.classList.add('hidden');setTimeout(()=>splash.remove(),280);},delay);}
+window.addEventListener('pinmind:digest-loaded',dismissSplash,{once:true});
+window.addEventListener('load',()=>setTimeout(dismissSplash,250),{once:true});
+setTimeout(dismissSplash,1800);
