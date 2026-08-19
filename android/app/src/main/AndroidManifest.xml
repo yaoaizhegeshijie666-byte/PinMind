@@ -2,6 +2,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <supports-screens android:smallScreens="true" android:normalScreens="true" android:largeScreens="true" android:xlargeScreens="true" android:anyDensity="true" />
     <application android:theme="@style/AppTheme" android:label="PinMind" android:icon="@drawable/ic_launcher" android:resizeableActivity="true">
         <activity android:name=".ShareReceiverActivity" android:exported="true" android:label="保存到 PinMind" android:theme="@style/ShareTheme" android:excludeFromRecents="true" android:noHistory="true">

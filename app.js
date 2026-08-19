@@ -54,7 +54,7 @@ applyReadState();
 const DAILY_TIME_KEY='pinmind.dailyTime';
 function updateDailySchedule(){
   const time=localStorage.getItem(DAILY_TIME_KEY)||'22:00';const now=new Date();const today=now.toISOString().slice(0,10);const last=localStorage.getItem('pinmind.lastDigest');const current=now.toTimeString().slice(0,5);
-  if(current<time){if(window.viewingToday!==false&&typeof showDigestWaiting==='function')showDigestWaiting();return;}if(last!==today){localStorage.setItem('pinmind.lastDigest',today);window.dispatchEvent(new CustomEvent('pinmind:daily-refresh',{detail:{date:today,time}}));}
+  if(current<time){if(window.viewingToday!==false&&typeof showDigestWaiting==='function')showDigestWaiting();return;}if(last!==today){window.dispatchEvent(new CustomEvent('pinmind:daily-refresh',{detail:{date:today,time}}));}
 }
 updateDailySchedule();setInterval(updateDailySchedule,60000);
 

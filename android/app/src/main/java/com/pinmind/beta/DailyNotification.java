@@ -24,7 +24,10 @@ public final class DailyNotification {
         int flags=PendingIntent.FLAG_UPDATE_CURRENT|(Build.VERSION.SDK_INT>=23?PendingIntent.FLAG_IMMUTABLE:0);
         PendingIntent pending=PendingIntent.getBroadcast(context,ALARM_ID,intent,flags);
         AlarmManager alarms=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
-        if(alarms!=null)alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,time.getTimeInMillis(),pending);
+        if(alarms!=null){
+            if(Build.VERSION.SDK_INT<31||alarms.canScheduleExactAlarms())alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,time.getTimeInMillis(),pending);
+            else alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,time.getTimeInMillis(),pending);
+        }
     }
     public static void cancel(Context context){
         Intent intent=new Intent(context,NotificationReceiver.class).setAction("com.pinmind.beta.DAILY_READY");

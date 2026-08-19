@@ -1,5 +1,5 @@
 const PinMindAPI={
-  get clientId(){let id=localStorage.getItem('pinmind.clientId');if(!id){id='client_'+(crypto.randomUUID?.()||Date.now().toString(36)+Math.random().toString(36).slice(2));localStorage.setItem('pinmind.clientId',id)}return id},
+  get clientId(){let id=localStorage.getItem('pinmind.clientId');if(!id){id='client_'+(crypto.randomUUID?.()||Date.now().toString(36)+Math.random().toString(36).slice(2));localStorage.setItem('pinmind.clientId',id)}window.PinMindNative?.setClientId?.(id);return id},
   get base(){return (localStorage.getItem('pinmind.apiBase')||'https://pinmind-api.onrender.com').replace(/\/$/,'')},
   async request(path,options={}){if(!this.base)throw new Error('BACKEND_NOT_CONFIGURED');const response=await fetch(this.base+path,{...options,headers:{'Content-Type':'application/json','X-PinMind-Client':this.clientId,...(options.headers||{})}});const data=await response.json();if(!response.ok)throw new Error(data.error||`HTTP_${response.status}`);return data},
   health(){return this.request('/health')},
@@ -40,7 +40,7 @@ async function refreshDailyDigest(){
   if(!window.dailyTimeReached?.()){window.showDigestWaiting?.();return;}
   window.showDigestState?.('正在整理今日知识','正在读取上次生成后新增的链接、文字和截图。');
   try{await PinMindAPI.generate()}catch(error){if(!['no_new_ready_sources','no_supported_knowledge'].includes(error.message))console.warn('PinMind generation deferred',error.message)}
-  await loadLiveDigest();
+  await loadLiveDigest();localStorage.setItem('pinmind.lastDigest',new Date().toISOString().slice(0,10));
 }
 window.refreshDailyDigest=refreshDailyDigest;
 const clipboardUrl=text=>String(text||'').match(/https?:\/\/[^\s]+/i)?.[0]?.replace(/[，。；、）】》]+$/,'')||'';

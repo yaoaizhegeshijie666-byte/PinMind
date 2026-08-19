@@ -12,7 +12,6 @@ public class NotificationReceiver extends BroadcastReceiver {
     private static final ExecutorService NETWORK=Executors.newSingleThreadExecutor();
     @Override public void onReceive(Context context,Intent intent){
         boolean enabled=context.getSharedPreferences("pinmind_config",Context.MODE_PRIVATE).getBoolean("notifications_enabled",true);
-        if(!enabled)return;
         String time=context.getSharedPreferences("pinmind_config",Context.MODE_PRIVATE).getString("daily_time","22:00");
         DailyNotification.schedule(context,time);
         if(Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction()))return;
@@ -27,6 +26,8 @@ public class NotificationReceiver extends BroadcastReceiver {
             connection=(HttpURLConnection)new URL(base.replaceAll("/+$","")+"/api/digests/generate").openConnection();
             connection.setRequestMethod("POST");connection.setConnectTimeout(60000);connection.setReadTimeout(180000);
             connection.setDoOutput(true);connection.setRequestProperty("Content-Type","application/json");
+            String client=context.getSharedPreferences("pinmind_config",Context.MODE_PRIVATE).getString("client_id","");
+            if(client!=null&&!client.isEmpty())connection.setRequestProperty("X-PinMind-Client",client);
             connection.getOutputStream().write("{}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
             int status=connection.getResponseCode();return status>=200&&status<300;
         }catch(Exception ignored){return false;}finally{if(connection!=null)connection.disconnect();}

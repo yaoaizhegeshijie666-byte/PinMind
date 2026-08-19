@@ -21,20 +21,32 @@ class TextExtractor(HTMLParser):
     def handle_data(self,data):
         if not self.skip and data.strip():self.parts.append(data.strip())
 
+def fetch_text(url,user_agent):
+    req=Request(url,headers={'User-Agent':user_agent,'Accept':'text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8','Accept-Language':'zh-CN,zh;q=0.9'})
+    with urlopen(req,timeout=25) as response:
+        if int(response.headers.get('Content-Length','0') or 0)>2_000_000:raise ValueError('response_too_large')
+        raw=response.read(2_000_001)
+        if len(raw)>2_000_000:raise ValueError('response_too_large')
+        content=raw.decode(response.headers.get_content_charset() or 'utf-8',errors='replace')
+    parser=TextExtractor();parser.feed(content)
+    return re.sub(r'\s+',' ',' '.join(parser.parts))[:50000]
+
 def safe_fetch(url):
     parsed=urlparse(url)
     if parsed.scheme not in ('http','https') or not parsed.hostname:raise ValueError('invalid_url')
     for info in socket.getaddrinfo(parsed.hostname,parsed.port or (443 if parsed.scheme=='https' else 80)):
         address=ipaddress.ip_address(info[4][0])
         if address.is_private or address.is_loopback or address.is_link_local or address.is_reserved:raise ValueError('private_address_blocked')
-    req=Request(url,headers={'User-Agent':'PinMind/0.6 (+content extraction)'})
-    with urlopen(req,timeout=15) as response:
-        if int(response.headers.get('Content-Length','0') or 0)>2_000_000:raise ValueError('response_too_large')
-        raw=response.read(2_000_001)
-        if len(raw)>2_000_000:raise ValueError('response_too_large')
-        html=raw.decode(response.headers.get_content_charset() or 'utf-8',errors='replace')
-    parser=TextExtractor();parser.feed(html)
-    return re.sub(r'\s+',' ',' '.join(parser.parts))[:50000]
+    blocked=('环境异常','需要验证','去验证','requiring CAPTCHA','Weixin Official Accounts Platform')
+    browser='Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/125 Mobile Safari/537.36'
+    try:direct=fetch_text(url,browser)
+    except Exception:direct=''
+    if len(direct)>=300 and not any(word in direct for word in blocked):return direct
+    reader='https://r.jina.ai/http://'+parsed.netloc+parsed.path+('?' + parsed.query if parsed.query else '')
+    try:fallback=fetch_text(reader,'PinMind/0.6.4')
+    except Exception:fallback=''
+    if len(fallback)>=300 and not any(word in fallback for word in blocked):return fallback
+    return ''
 
 def authorized(handler):
     expected=os.getenv('PINMIND_DEVICE_TOKEN','')
@@ -154,11 +166,13 @@ class Handler(BaseHTTPRequestHandler):
                 if len(base64.b64decode(image,validate=True))>6_000_000:raise ValueError('image_too_large')
             except Exception:raise ValueError('invalid_image_data')
             input_type='screenshot'
+        existing_id=None
         if url:
             with db() as conn:existing=conn.execute('SELECT * FROM sources WHERE owner_id=? AND url=? ORDER BY captured_at DESC LIMIT 1',(self.client_id(),url)).fetchone()
-            if existing:
+            if existing and existing['parse_status']=='success' and existing['content']:
                 with db() as conn:conn.execute('UPDATE sources SET captured_at=?,starred=? WHERE id=?',(now_local().isoformat(),1 if data.get('starred') or existing['starred'] else 0,existing['id']))
                 return self.send_json({'source':row_dict(existing),'duplicate':True})
+            if existing:existing_id=existing['id']
         completeness='complete';parse_status='success';status='ready'
         if url and (not content or content==url or len(content)<500):
             try:content=safe_fetch(url)
@@ -166,11 +180,14 @@ class Handler(BaseHTTPRequestHandler):
         if not content and not image:
             completeness='needs_input';parse_status='failed';status='needs_input'
         elif len(content)<120 and not image:completeness='partial'
-        item={'id':'src_'+uuid.uuid4().hex[:12],'input_type':input_type,'title':data.get('title') or (content[:60] if content else '截图来源'),
+        item={'id':existing_id or 'src_'+uuid.uuid4().hex[:12],'input_type':input_type,'title':data.get('title') or (content[:60] if content else '截图来源'),
               'content':content,'url':url,'starred':1 if data.get('starred') else 0,'status':status,'captured_at':now_local().isoformat(),
               'content_mime':data.get('content_mime'),'image_data':image or None,'completeness':completeness,'parse_status':parse_status,'owner_id':self.client_id()}
-        with db() as conn:conn.execute('''INSERT INTO sources(id,input_type,title,content,url,starred,status,captured_at,content_mime,image_data,completeness,parse_status,generated_at,generated_knowledge_ids_json,owner_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,NULL,'[]',?)''',tuple(item[k] for k in ('id','input_type','title','content','url','starred','status','captured_at','content_mime','image_data','completeness','parse_status','owner_id')))
-        return self.send_json({'source':row_dict(item)},201)
+        with db() as conn:
+            values=tuple(item[k] for k in ('input_type','title','content','url','starred','status','captured_at','content_mime','image_data','completeness','parse_status','owner_id'))
+            if existing_id:conn.execute("UPDATE sources SET input_type=?,title=?,content=?,url=?,starred=?,status=?,captured_at=?,content_mime=?,image_data=?,completeness=?,parse_status=?,owner_id=?,generated_at=NULL,generated_knowledge_ids_json='[]' WHERE id=?",values+(existing_id,))
+            else:conn.execute('''INSERT INTO sources(id,input_type,title,content,url,starred,status,captured_at,content_mime,image_data,completeness,parse_status,generated_at,generated_knowledge_ids_json,owner_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,NULL,'[]',?)''',(item['id'],)+values)
+        return self.send_json({'source':row_dict(item),'retried':bool(existing_id)},200 if existing_id else 201)
     def generate_digest(self):
         day=now_local().date().isoformat()
         with db() as conn:
