@@ -103,7 +103,7 @@ public class MainActivity extends Activity {
     public class NativeBridge {
         @JavascriptInterface public String getCaptures(){
             JSONArray result=new JSONArray();Set<String> rows=getSharedPreferences("pinmind_sources",MODE_PRIVATE).getStringSet("captures",null);if(rows==null)return result.toString();
-            for(String row:rows){try{String[] p=row.split("\\t",-1);JSONObject item=new JSONObject();String mime=p.length>1?p[1]:"text/plain";String text=p.length>3?p[3]:"";String files=p.length>4?p[4]:"";boolean image=mime.startsWith("image/");item.put("input_type",image?"screenshot":"selected_text");item.put("title",p.length>2?p[2]:"");item.put("content",text);if(image){String encoded=encodeImage(files);if(!encoded.isEmpty()){item.put("image_data",encoded);item.put("content_mime","image/jpeg");}}String url=findUrl(text);if(!url.isEmpty())item.put("url",url);result.put(item);}catch(Exception ignored){}}
+            for(String row:rows){try{String[] p=row.split("\\t",-1);JSONObject item=new JSONObject();String mime=p.length>1?p[1]:"text/plain";String text=p.length>3?p[3]:"";String files=p.length>4?p[4]:"";boolean image=mime.startsWith("image/");item.put("input_type",image?"screenshot":"selected_text");item.put("title",p.length>2?p[2]:"");item.put("content",text);item.put("starred",p.length>5&&"1".equals(p[5]));if(image){String encoded=encodeImage(files);if(!encoded.isEmpty()){item.put("image_data",encoded);item.put("content_mime","image/jpeg");}}String url=findUrl(text);if(!url.isEmpty())item.put("url",url);result.put(item);}catch(Exception ignored){}}
             return result.toString();
         }
         @JavascriptInterface public void clearCaptures(){deleteCaptureFiles();getSharedPreferences("pinmind_sources",MODE_PRIVATE).edit().remove("captures").apply();}
@@ -111,6 +111,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void setApiBase(String value){getSharedPreferences("pinmind_config",MODE_PRIVATE).edit().putString("api_base",value).apply();}
         @JavascriptInterface public void setDailyTime(String value){runOnUiThread(()->DailyNotification.schedule(MainActivity.this,value));}
         @JavascriptInterface public void setNotificationsEnabled(boolean enabled){getSharedPreferences("pinmind_config",MODE_PRIVATE).edit().putBoolean("notifications_enabled",enabled).apply();runOnUiThread(()->DailyNotification.schedule(MainActivity.this,getSharedPreferences("pinmind_config",MODE_PRIVATE).getString("daily_time","22:00")));}
+        @JavascriptInterface public void copyText(String value){ClipboardManager clipboard=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);if(clipboard!=null)clipboard.setPrimaryClip(ClipData.newPlainText("PinMind Markdown",value==null?"":value));}
         @JavascriptInterface public void openUrl(String value){runOnUiThread(()->openExternal(Uri.parse(value)));}
         private String encodeImage(String paths){
             String path=paths==null?"":paths.split("\\|",2)[0];File file=new File(path);if(!file.isFile())return "";

@@ -118,6 +118,12 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith('/api/sources'):
             with db() as conn:rows=conn.execute('SELECT * FROM sources ORDER BY captured_at DESC').fetchall()
             return self.send_json({'sources':[row_dict(x) for x in rows]})
+        if self.path.startswith('/api/digests/history'):
+            day=now_local().date().isoformat()
+            with db() as conn:rows=conn.execute("SELECT * FROM knowledge WHERE digest_date<? AND state IN (?,?) ORDER BY digest_date DESC,created_at",(day,'candidate','selected')).fetchall()
+            grouped={}
+            for row in rows:grouped.setdefault(row['digest_date'],[]).append(row_dict(row))
+            return self.send_json({'digests':[{'digest_date':date,'knowledge_items':items} for date,items in grouped.items()]})
         if self.path.startswith('/api/digests/today'):
             day=now_local().date().isoformat()
             with db() as conn:rows=conn.execute('SELECT * FROM knowledge WHERE digest_date=? ORDER BY created_at',(day,)).fetchall()

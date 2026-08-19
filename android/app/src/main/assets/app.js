@@ -1,31 +1,3 @@
-const items = [
-  {
-    tone: 'orange', topic: 'AI 产品设计',
-    headline: 'AI 自动化程度越高，越需要保留用户的关键决策权。',
-    paragraphs: ['AI 适合代替用户完成重复、低风险且可撤销的操作；但涉及资产、公开表达或他人权益时，确认权必须回到用户手中。'],
-    title: '判断是否需要人工确认',
-    points: ['操作是否可以被完整撤销', '错误结果是否会影响资产、公开信息或他人'],
-    related: '用户信任来自可理解、可控制和可撤销',
-    source: '《AI Agent 的产品边界》· 少数派', url: 'https://sspai.com/'
-  },
-  {
-    tone: 'blue', topic: '知识管理',
-    headline: '收藏的价值不在于数量，而在于它是否能被下一次思考重新调用。',
-    paragraphs: ['把内容存进文件夹只完成了保存。真正有效的知识系统，需要把观点转换成可以检索、关联和复用的表达。'],
-    title: '从收藏到知识的三步转换',
-    points: ['提炼一个可独立成立的结论', '保留结论成立的条件与来源', '连接到一个已有问题或观点'],
-    source: '《打造第二大脑，不是建立第二个仓库》· 即刻', url: 'https://web.okjike.com/'
-  },
-  {
-    tone: 'mint', topic: '用户研究',
-    headline: '用户说“想要更智能”，往往是在要求减少判断成本，而不是增加 AI 功能。',
-    paragraphs: ['“智能”是用户对结果的描述，不是功能方案。产品需要继续追问：哪个判断最耗时、哪些信息总被遗漏、什么结果可以安全地自动完成。'],
-    title: '访谈时继续追问',
-    points: ['最近一次感到麻烦是什么时候', '当时在比较哪些信息', '如果系统代替你决定，最担心什么'],
-    source: '《别把用户口中的 AI 当需求》· 产品沉思录', url: 'https://www.productthinking.cc/'
-  }
-];
-
 const list = document.querySelector('#knowledgeList');
 PinMindState.migrate();
 window.currentDigestDate=document.querySelector('.date').textContent.split(' · ')[0];

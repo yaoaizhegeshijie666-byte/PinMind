@@ -70,6 +70,20 @@ class Database:
         for name, definition in columns.items():
             if name not in existing:
                 self.connection.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
+    def _remove_demo_records(self):
+        titles=("链接解析测试","PinMind 云端测试")
+        rows=self.execute("SELECT id FROM sources WHERE title IN (?,?)",titles).fetchall()
+        demo_ids={row["id"] if hasattr(row,"keys") else row[0] for row in rows}
+        if not demo_ids:return
+        knowledge=self.execute("SELECT id,source_ids_json FROM knowledge").fetchall()
+        for row in knowledge:
+            source_json=row["source_ids_json"] if hasattr(row,"keys") else row[1]
+            try:source_ids=set(json.loads(source_json or "[]"))
+            except Exception:source_ids=set()
+            if source_ids and source_ids.issubset(demo_ids):
+                knowledge_id=row["id"] if hasattr(row,"keys") else row[0]
+                self.execute("DELETE FROM knowledge WHERE id=?",(knowledge_id,))
+        for source_id in demo_ids:self.execute("DELETE FROM sources WHERE id=?",(source_id,))
     def _backfill_generated_sources(self):
         rows=self.execute("SELECT source_ids_json FROM knowledge").fetchall()
         source_ids=set()

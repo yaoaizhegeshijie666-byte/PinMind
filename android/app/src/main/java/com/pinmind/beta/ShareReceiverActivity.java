@@ -10,6 +10,7 @@ import android.os.Handler;
 import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Button;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -17,6 +18,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class ShareReceiverActivity extends Activity {
+    private String captureRow;
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         Intent intent=getIntent();String action=intent.getAction();
@@ -30,11 +32,12 @@ public class ShareReceiverActivity extends Activity {
                 for(int i=0;i<clip.getItemCount();i++)append(files,copyImage(clip.getItemAt(i).getUri()));
             }else append(files,copyImage(intent.getParcelableExtra(Intent.EXTRA_STREAM)));
         }
-        saveCapture(mime,title,text,files.toString());
+        captureRow=saveCapture(mime,title,text,files.toString());
         LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setGravity(Gravity.CENTER);panel.setPadding(48,56,48,56);
         TextView heading=new TextView(this);heading.setText("已保存至 PinMind");heading.setTextSize(21);heading.setGravity(Gravity.CENTER);
         TextView note=new TextView(this);note.setText("将在你设置的时间为你整理");note.setTextSize(15);note.setGravity(Gravity.CENTER);note.setPadding(0,18,0,0);
-        panel.addView(heading);panel.addView(note);setContentView(panel);new Handler().postDelayed(this::finish,1500);
+        Button star=new Button(this);star.setText("☆ 标为星标");star.setOnClickListener(view->{setStarred();star.setText("★ 已标为星标");star.setEnabled(false);});
+        panel.addView(heading);panel.addView(note);panel.addView(star);setContentView(panel);new Handler().postDelayed(this::finish,2500);
     }
     private String copyImage(Uri uri){
         if(uri==null)return "";
@@ -46,11 +49,19 @@ public class ShareReceiverActivity extends Activity {
             return target.getAbsolutePath();
         }catch(Exception ignored){target.delete();return "";}
     }
-    private void saveCapture(String mime,String title,String text,String files){
+    private String saveCapture(String mime,String title,String text,String files){
         SharedPreferences prefs=getSharedPreferences("pinmind_sources",MODE_PRIVATE);
         Set<String> saved=new HashSet<>(prefs.getStringSet("captures",new HashSet<>()));
-        saved.add(System.currentTimeMillis()+"\t"+clean(mime)+"\t"+clean(title)+"\t"+clean(text)+"\t"+clean(files));
-        prefs.edit().putStringSet("captures",saved).apply();
+        String row=System.currentTimeMillis()+"\t"+clean(mime)+"\t"+clean(title)+"\t"+clean(text)+"\t"+clean(files)+"\t0";saved.add(row);
+        prefs.edit().putStringSet("captures",saved).apply();return row;
+    }
+    private void setStarred(){
+        SharedPreferences prefs=getSharedPreferences("pinmind_sources",MODE_PRIVATE);
+        Set<String> saved=new HashSet<>(prefs.getStringSet("captures",new HashSet<>()));
+        if(saved.remove(captureRow)){
+            captureRow=captureRow.substring(0,captureRow.length()-1)+"1";saved.add(captureRow);
+            prefs.edit().putStringSet("captures",saved).apply();
+        }
     }
     private static void append(StringBuilder out,String value){if(!value.isEmpty()){if(out.length()>0)out.append('|');out.append(value);}}
     private static String value(String value){return value==null?"":value;}
