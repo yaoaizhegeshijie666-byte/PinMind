@@ -27,23 +27,21 @@ const items = [
 ];
 
 const list = document.querySelector('#knowledgeList');
-const collectedKeys=new Set(JSON.parse(localStorage.getItem('pinmind.collected')||'[]'));
-const saveCollected=()=>localStorage.setItem('pinmind.collected',JSON.stringify([...collectedKeys]));
-const libraryItems=()=>JSON.parse(localStorage.getItem('pinmind.libraryItems')||'[]');
-function saveLibraryItem(item,selected){const saved=libraryItems().filter(entry=>entry.headline!==item.headline);if(selected)saved.push(item);localStorage.setItem('pinmind.libraryItems',JSON.stringify(saved));window.dispatchEvent(new CustomEvent('pinmind:library-updated'));}
-window.saveLibraryItem=saveLibraryItem;
-items.filter(item=>collectedKeys.has(item.headline)&&!libraryItems().some(saved=>saved.headline===item.headline)).forEach(item=>saveLibraryItem(item,true));
+PinMindState.migrate();
+window.currentDigestDate=document.querySelector('.date').textContent.split(' · ')[0];
+window.currentKnowledgeItems=[];
 const safeUrl=value=>/^https?:\/\//i.test(value||'')?value:'#';
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-function renderKnowledgeItems(knowledgeItems){
+function renderKnowledgeItems(knowledgeItems,digestDate=window.currentDigestDate){
+  window.currentDigestDate=digestDate;window.currentKnowledgeItems=knowledgeItems;
   list.innerHTML='';
   knowledgeItems.forEach((item,index)=>{
-    const article=document.createElement('article'),selected=collectedKeys.has(item.headline);
+    const article=document.createElement('article'),selected=PinMindState.isCollected(item);
     article.className=`knowledge-card ${item.tone||['orange','blue','mint'][index%3]}`;
     article.dataset.knowledgeKey=item.headline;
     const points=(item.points?.length?item.points:item.tags||[]).map(point=>`<li>${escapeHtml(point)}</li>`).join('');
     article.innerHTML=`<div class="card-index"><span>${String(index+1).padStart(2,'0')}</span><i></i><em>${escapeHtml(item.topic||'今日知识')}</em></div><h2>${escapeHtml(item.headline)}</h2>${(item.paragraphs||[]).map(paragraph=>`<p>${escapeHtml(paragraph)}</p>`).join('')}<div class="framework"><h3>${escapeHtml(item.title||'核心内容')}</h3><ol>${points}</ol></div><footer><a class="source-direct" href="${escapeHtml(safeUrl(item.url))}">来源：${escapeHtml(item.source||'PinMind AI 整理')} ↗</a><button class="toggle${selected?' selected':''}"><span>${selected?'✓':'＋'}</span> ${selected?'已收录':'加入知识库'}</button></footer>`;
-    article.querySelector('.toggle').addEventListener('click',event=>{const button=event.currentTarget,on=button.classList.toggle('selected');if(on)collectedKeys.add(item.headline);else collectedKeys.delete(item.headline);saveCollected();saveLibraryItem(item,on);button.innerHTML=on?'<span>✓</span> 已收录':'<span>＋</span> 加入知识库';});
+    article.querySelector('.toggle').addEventListener('click',event=>{const button=event.currentTarget,on=PinMindState.toggleCollected(item,window.currentDigestDate);button.classList.toggle('selected',on);button.innerHTML=on?'<span>✓</span> 已收录':'<span>＋</span> 加入知识库';});
     list.appendChild(article);
   });
 }
@@ -65,13 +63,12 @@ document.querySelector('#readButton').addEventListener('click', () => {
   readButton.classList.add('is-read');
   readButton.disabled = true;
   list.classList.add('fade'); document.querySelector('.intro').classList.add('fade');
-  const readDate=document.querySelector('.date').textContent;localStorage.setItem('pinmind.read.'+readDate,'1');localStorage.setItem('pinmind.read.'+readDate.split(' · ')[0],'1');
-  window.dispatchEvent(new CustomEvent('pinmind:read-state-changed',{detail:{date:document.querySelector('.date').textContent}}));
+  PinMindState.markRead(window.currentDigestDate,window.currentKnowledgeItems);
   setTimeout(() => { list.hidden = true; document.querySelector('.intro').hidden = true; document.querySelector('#emptyState').hidden = false; }, 180);
 });
 
 function applyReadState(){
-  const read=localStorage.getItem('pinmind.read.'+document.querySelector('.date').textContent)==='1',button=document.querySelector('#readButton');button.classList.toggle('is-read',read);button.disabled=read;
+  const read=PinMindState.isRead(window.currentDigestDate),button=document.querySelector('#readButton');button.classList.toggle('is-read',read);button.disabled=read;
   if(read){list.hidden=true;document.querySelector('.intro').hidden=true;document.querySelector('#emptyState').hidden=false;}
   else{list.hidden=false;document.querySelector('.intro').hidden=false;document.querySelector('#emptyState').hidden=true;list.classList.remove('fade');document.querySelector('.intro').classList.remove('fade');}
 }

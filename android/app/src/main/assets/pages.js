@@ -20,7 +20,7 @@ const pageTemplates = {
       <article class="markdown-document"><header><span>AI 产品设计</span><button>复制 Markdown</button></header><h1>用户控制与确认</h1><p>AI 自动化程度越高，越需要保留用户的关键决策权。</p><h2>核心问题</h2><ol><li><strong>什么操作可以由 AI 自动完成？</strong><ul><li>重复、低风险且可撤销的操作</li><li>结果透明、用户可以快速检查的操作</li><li>不影响资产、公开信息或他人权益的操作</li></ul></li><li><strong>什么操作需要人工确认？</strong><ul><li>不可逆或恢复成本很高的操作</li><li>会影响资产、公开表达或他人的操作</li><li>模型缺少关键上下文时的判断</li></ul></li></ol><h2>判断框架</h2><ul><li><strong>可撤销性</strong><ul><li>结果能否完整恢复</li><li>恢复是否需要额外成本</li></ul></li><li><strong>影响范围</strong><ul><li>仅影响当前用户</li><li>是否会触达外部系统或其他人</li></ul></li><li><strong>用户认知</strong><ul><li>系统是否解释了即将发生的动作</li><li>用户能否在关键节点接管</li></ul></li></ul><blockquote>用户信任不是来自 AI 从不犯错，而是来自错误发生后仍有清晰、低成本的恢复路径。</blockquote><h2>原始来源</h2><p><a href="https://sspai.com/">《AI Agent 的产品边界》↗</a></p></article>
     </section>    <section class="library-view graph-view" id="graphView" hidden><div class="graph-toolbar"><span>拖动节点 · 使用滚轮缩放 · 点击查看详情</span></div><div class="graph-canvas" id="graphCanvas"><svg aria-hidden="true"></svg><button class="graph-node hub" data-node="hub" style="left:50%;top:47%">知识库<small>7 条知识</small></button><button class="graph-node orange-node" data-node="ai" data-connect="hub" style="left:21%;top:25%">AI 产品设计</button><button class="graph-node blue-node" data-node="km" data-connect="hub" style="left:80%;top:25%">知识管理</button><button class="graph-node mint-node" data-node="control" data-connect="hub" style="left:25%;top:75%">用户控制权</button><button class="graph-node peach-node" data-node="reuse" data-connect="hub" style="left:78%;top:74%">可复用表达</button><button class="graph-node leaf" data-node="recovery" data-connect="ai" style="left:10%;top:56%">恢复路径</button></div></section>`,  uncollected: `
     <header class="sub-header"><div><p class="eyebrow">ARCHIVE</p><h1>未收录</h1><p>已阅但没有进入知识库的完整知识会保存在这里。</p></div></header>
-    <section class="uncollected-full-list"><article class="uncollected-card"><div class="uncollected-meta"><span>AI 产品</span><time>8月16日</time></div><h2>模型能力不是产品价值，稳定解决问题才是。</h2><p>用户购买的不是模型参数，而是一个问题能否被持续、稳定地解决。模型升级只有转化为更低的失败率、更少的等待和更清晰的结果，才构成产品价值。</p><div class="mini-framework"><h3>判断产品价值</h3><ul><li>任务成功率是否持续提升</li><li>失败后是否有明确恢复路径</li><li>用户是否减少了判断与操作成本</li></ul></div><a href="https://sspai.com/">来源：《AI 产品的价值验证》↗</a><div class="row-actions"><button class="collect-small">＋ 加入知识库</button><button class="danger">删除</button></div></article><article class="uncollected-card"><div class="uncollected-meta"><span>用户研究</span><time>8月11日</time></div><h2>访谈中的沉默，常常比快速回答包含更多信息。</h2><p>用户停顿时往往正在回忆真实经历或权衡难以表达的感受。立刻补充问题会打断这段思考，让访谈重新回到礼貌而概括的回答。</p><div class="mini-framework"><h3>访谈动作</h3><ul><li>停顿后至少等待五秒</li><li>继续追问最近一次真实经历</li><li>区分用户的推测与实际行为</li></ul></div><a href="https://web.okjike.com/">来源：用户访谈笔记 ↗</a><div class="row-actions"><button class="collect-small">＋ 加入知识库</button><button class="danger">删除</button></div></article></section>`,  sources: `
+    <section class="uncollected-full-list"></section>`,  sources: `
     <header class="sub-header"><div><p class="eyebrow">SOURCES</p><h1>来源记录</h1><p>查看捕捉来源与处理状态</p></div><div class="filters source-filters"><div class="filter-control"><button data-source-filter-toggle="type">全部类型⌄</button><div class="filter-menu" data-source-filter-menu="type"><button data-value="all">全部类型</button><button data-value="link">链接</button><button data-value="text">文字</button><button data-value="image">截图</button></div></div><div class="filter-control"><button data-source-filter-toggle="status">全部状态⌄</button><div class="filter-menu" data-source-filter-menu="status"><button data-value="all">全部状态</button><button data-value="complete">已完成</button><button data-value="working">解析中</button><button data-value="pending">待补充</button><button data-value="failed">解析失败</button></div></div></div></header>
     <section class="source-table"><div class="source-head"><span>来源</span><span>捕捉时间</span><span>状态</span><span>知识</span></div>
       <button class="source-row" data-source-type="link" data-source-status="complete"><i class="source-icon link-icon">↗</i><span><strong>AI Agent 的产品边界</strong><small>少数派 · 网页链接</small></span><time>今天 16:42</time><em class="ok">● 已完成</em><b>2 条</b></button>
@@ -71,9 +71,9 @@ async function loadLiveSources(){
 window.addEventListener('pinmind:sources-updated',()=>loadLiveSources());
 function storedSet(key){return new Set(JSON.parse(localStorage.getItem(key)||'[]'));}
 function saveSet(key,set){localStorage.setItem(key,JSON.stringify([...set]));}
-function restorePageState(){const collected=storedSet('pinmind.collected'),deleted=storedSet('pinmind.deleted');pageHost.querySelectorAll('.uncollected-card').forEach(card=>{const key=card.querySelector('h2')?.textContent||'';if(deleted.has(key)){card.remove();return;}const button=card.querySelector('.collect-small');if(button&&collected.has(key)){button.classList.add('done');button.textContent='✓ 已收录';}});pageHost.querySelectorAll('.knowledge-module').forEach(card=>{const key=card.dataset.id||card.querySelector('h3')?.textContent||'';if(deleted.has('module:'+key))card.remove();});}
+function restorePageState(){const deleted=storedSet('pinmind.deleted');pageHost.querySelectorAll('.knowledge-module').forEach(card=>{const key=card.dataset.id||card.querySelector('h3')?.textContent||'';if(deleted.has('module:'+key))card.remove();});}
 
-function savedLibraryItems(){return JSON.parse(localStorage.getItem('pinmind.libraryItems')||'[]');}
+function savedLibraryItems(){return PinMindState.library();}
 function renderSavedLibraryItems(){
   if(!pageHost.querySelector('#boardView'))return;
   const board=pageHost.querySelector('.orange-cluster .draggable-board'),note=pageHost.querySelector('.markdown-document'),canvas=pageHost.querySelector('#graphCanvas');
@@ -83,6 +83,16 @@ function renderSavedLibraryItems(){
     if(![...canvas.querySelectorAll('.graph-node')].some(node=>node.textContent===item.headline))canvas.insertAdjacentHTML('beforeend',`<button class="graph-node leaf" data-connect="hub" style="left:${18+(index%4)*20}%;top:${84-(index%2)*12}%">${item.headline}</button>`);
   });
   const hub=canvas.querySelector('.hub small');if(hub)hub.textContent=`${pageHost.querySelectorAll('.knowledge-module').length} 条知识`;updateGraphEdges();
+}
+function renderUncollectedItems(){
+  const list=pageHost.querySelector('.uncollected-full-list');if(!list)return;list.innerHTML='';
+  const entries=PinMindState.uncollected();
+  if(!entries.length){list.innerHTML='<article class="uncollected-card"><h2>暂无未收录知识</h2><p>已阅时未加入知识库的内容会出现在这里。</p></article>';return;}
+  entries.forEach(item=>{
+    const card=document.createElement('article');card.className='uncollected-card';card._knowledgeItem=item;
+    card.innerHTML='<div class="uncollected-meta"><span></span><time></time></div><h2></h2><p></p><div class="row-actions"><button class="collect-small">＋ 加入知识库</button><button class="danger">删除</button></div>';
+    card.querySelector('.uncollected-meta span').textContent=item.topic||'未收录';card.querySelector('time').textContent=item.digestDate||'';card.querySelector('h2').textContent=item.headline;card.querySelector(':scope>p').textContent=item.paragraphs?.[0]||item.summary||'';list.appendChild(card);
+  });
 }
 function openPage(page, query='') {
   document.querySelectorAll('.nav-item[data-page]').forEach(item => item.classList.toggle('active', item.dataset.page === page));
@@ -94,6 +104,7 @@ function openPage(page, query='') {
   document.querySelector('#scrim').classList.remove('open');
   restorePageState();
   if(page==='library')renderSavedLibraryItems();
+  if(page==='uncollected')renderUncollectedItems();
   if(page==='sources')loadLiveSources();
 }
 
@@ -129,8 +140,9 @@ document.querySelector('#closeMobileSearch').addEventListener('click',()=>{
   search.classList.remove('open');search.setAttribute('aria-hidden','true');
 });
 const historyDigests={'8月17日':'为什么 AI 产品仍需保留人工确认','8月15日':'知识真正被使用，才完成了整理','8月12日':'好问题比更多功能更接近用户需求'};
+const historyItems=day=>items.map((item,index)=>({...item,headline:index===0?historyDigests[day]:item.headline}));
 function historyDate(item){return item.querySelector('time').textContent;}
-document.querySelectorAll('.history-item').forEach(item=>{if(localStorage.getItem('pinmind.read.'+historyDate(item))==='1')item.remove();});
+document.querySelectorAll('.history-item').forEach(item=>{if(PinMindState.isRead(historyDate(item)))item.remove();});
 window.addEventListener('pinmind:read-state-changed',event=>{const day=event.detail.date.split(' · ')[0];document.querySelectorAll('.history-item').forEach(item=>{if(historyDate(item)===day)item.remove();});});
 document.querySelectorAll('.history-item').forEach(item=>item.addEventListener('click',()=>{
   openPage('today');document.querySelectorAll('.history-item').forEach(row=>row.classList.toggle('current',row===item));
@@ -139,7 +151,7 @@ document.querySelectorAll('.history-item').forEach(item=>item.addEventListener('
   const day=item.querySelector('time').textContent;const weekdays={'8月17日':'星期一','8月15日':'星期六','8月12日':'星期三'};document.querySelector('.date').textContent=day+' · '+(weekdays[day]||'');
   document.querySelector('#knowledgeList').hidden=false;document.querySelector('.intro').hidden=false;document.querySelector('#emptyState').hidden=true;
   document.querySelector('#knowledgeList').classList.remove('fade');document.querySelector('.intro').classList.remove('fade');
-  const first=document.querySelector('.knowledge-card h2');if(first)first.textContent=historyDigests[day];
+  window.renderKnowledgeItems(historyItems(day),day);
   const read=document.querySelector('#readButton');read.disabled=false;read.classList.remove('is-read');
   window.applyReadState?.();
 }));
@@ -168,7 +180,7 @@ function showCaptureSheet() {
 pageHost.addEventListener('click', event => {
   const node = event.target.closest('.node'); if (node) { showDetail('knowledge', node.childNodes[0].textContent.trim()); return; }
   const source = event.target.closest('.source-row'); if (source) { showDetail('source', source.querySelector('strong').textContent); return; }
-  const collect = event.target.closest('.collect-small'); if (collect) { const on=collect.classList.toggle('done'),card=collect.closest('.uncollected-card'),key=card.querySelector('h2').textContent,set=storedSet('pinmind.collected');if(on)set.add(key);else set.delete(key);saveSet('pinmind.collected',set);window.saveLibraryItem?.({headline:key,topic:card.querySelector('.uncollected-meta span')?.textContent,summary:card.querySelector(':scope>p')?.textContent},on);collect.textContent=on?'✓ 已收录':'＋ 加入知识库';return; }
+  const collect=event.target.closest('.collect-small');if(collect){const card=collect.closest('.uncollected-card'),item=card._knowledgeItem,on=PinMindState.toggleCollected(item,item.digestDate);if(on){card.remove();if(!pageHost.querySelector('.uncollected-card'))renderUncollectedItems();}return;}
   if (event.target.closest('#captureButton')) showCaptureSheet();
 });
 
@@ -178,7 +190,7 @@ pageHost.addEventListener('dragend', () => { if(draggedModule) draggedModule.cla
 pageHost.addEventListener('dragover', event => { const board=event.target.closest('.draggable-board'); if(!board||!draggedModule)return; event.preventDefault(); const target=event.target.closest('.knowledge-module'); if(target&&target!==draggedModule) board.insertBefore(draggedModule,target); else if(!target) board.appendChild(draggedModule); });
 pageHost.addEventListener('click', event => {
   const remove=event.target.closest('.module-delete');
-  if(remove){event.preventDefault();event.stopPropagation();const card=remove.closest('.knowledge-module'),title=card.querySelector('h3')?.textContent||'',key=card.dataset.id||title,set=storedSet('pinmind.deleted');set.add('module:'+key);saveSet('pinmind.deleted',set);if(card.dataset.saved){const collected=storedSet('pinmind.collected');collected.delete(title);saveSet('pinmind.collected',collected);window.saveLibraryItem?.({headline:title},false);pageHost.querySelectorAll('[data-saved]').forEach(item=>{if(item!==card&&item.textContent.includes(title))item.remove();});}card.classList.add('removing');setTimeout(()=>card.remove(),160);return;}
+  if(remove){event.preventDefault();event.stopPropagation();const card=remove.closest('.knowledge-module'),title=card.querySelector('h3')?.textContent||'',key=card.dataset.id||title,set=storedSet('pinmind.deleted');set.add('module:'+key);saveSet('pinmind.deleted',set);if(card.dataset.saved){const item=PinMindState.library().find(entry=>entry.headline===title);if(item&&PinMindState.isCollected(item))PinMindState.toggleCollected(item,item.digestDate);pageHost.querySelectorAll('[data-saved]').forEach(view=>{if(view!==card&&view.textContent.includes(title))view.remove();});}card.classList.add('removing');setTimeout(()=>card.remove(),160);return;}
   const view=event.target.closest('[data-library-view]');
   if(view?.dataset.libraryView==='graph'){
     const graphCount=pageHost.querySelectorAll('.knowledge-module').length;
@@ -228,7 +240,7 @@ pageHost.addEventListener('click',event=>{
   if(event.target.closest('[data-retry-sources]')){loadLiveSources();return;}
   const danger=event.target.closest('.uncollected-card .danger');if(danger){event.stopPropagation();showDeleteConfirm(danger.closest('.uncollected-card'));}
 },true);
-function showDeleteConfirm(card){const dialog=document.createElement('div');dialog.className='confirm-dialog';dialog.innerHTML='<h2>删除这条未收录知识？</h2><p>删除后将无法恢复，但不会删除原始来源记录。</p><div><button class="cancel-delete">取消</button><button class="confirm-delete">确认删除</button></div>';document.body.appendChild(dialog);document.querySelector('#scrim').classList.add('open');requestAnimationFrame(()=>dialog.classList.add('open'));const close=()=>{dialog.classList.remove('open');document.querySelector('#scrim').classList.remove('open');setTimeout(()=>dialog.remove(),180)};dialog.querySelector('.cancel-delete').addEventListener('click',close);dialog.querySelector('.confirm-delete').addEventListener('click',()=>{const set=storedSet('pinmind.deleted');set.add(card.querySelector('h2')?.textContent||'');saveSet('pinmind.deleted',set);card.remove();close()});}
+function showDeleteConfirm(card){const dialog=document.createElement('div');dialog.className='confirm-dialog';dialog.innerHTML='<h2>删除这条未收录知识？</h2><p>删除后将无法恢复，但不会删除原始来源记录。</p><div><button class="cancel-delete">取消</button><button class="confirm-delete">确认删除</button></div>';document.body.appendChild(dialog);document.querySelector('#scrim').classList.add('open');requestAnimationFrame(()=>dialog.classList.add('open'));const close=()=>{dialog.classList.remove('open');document.querySelector('#scrim').classList.remove('open');setTimeout(()=>dialog.remove(),180)};dialog.querySelector('.cancel-delete').addEventListener('click',close);dialog.querySelector('.confirm-delete').addEventListener('click',()=>{const set=storedSet('pinmind.deleted');set.add(card.querySelector('h2')?.textContent||'');saveSet('pinmind.deleted',set);if(card._knowledgeItem)PinMindState.deleteUncollected(card._knowledgeItem);card.remove();close()});}
 pageHost.addEventListener('wheel',event=>{const canvas=event.target.closest('#graphCanvas');if(!canvas)return;event.preventDefault();const factor=event.deltaY<0?1.1:.9;let zoom=parseFloat(canvas.dataset.zoom||'1');const next=Math.max(.65,Math.min(1.65,zoom*factor));const applied=next/zoom;canvas.dataset.zoom=String(next);canvas.querySelectorAll('.graph-node').forEach(node=>{const left=parseFloat(node.style.left),top=parseFloat(node.style.top);node.style.left=(50+(left-50)*applied)+'%';node.style.top=(50+(top-50)*applied)+'%';});updateGraphEdges();},{passive:false});
 
 
