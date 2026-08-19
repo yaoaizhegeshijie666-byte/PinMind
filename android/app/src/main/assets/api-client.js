@@ -17,7 +17,8 @@ async function loadLiveDigest(){
   if(!PinMindAPI.base||!window.renderKnowledgeItems)return;
   try{
     const [data,sourceData]=await Promise.all([PinMindAPI.today(),PinMindAPI.sources().catch(()=>({sources:[]}))]);
-    if(!data.knowledge_items?.length)return;
+    if(window.viewingToday===false)return;
+    const now=new Date(),today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');if(data.digest_date===today&&!window.dailyTimeReached?.()){window.showDigestWaiting?.();return;}if(!data.knowledge_items?.length){window.showDigestWaiting?.();return;}
     const sources=new Map((sourceData.sources||[]).map(source=>[source.id,source]));
     const tones=['orange','blue','mint'];
     const liveItems=data.knowledge_items.map((item,index)=>{
@@ -42,4 +43,5 @@ function showClipboardPrompt(url){
 }
 async function checkClipboardLink(force=false){if(!force&&!window.PinMindNative?.getClipboardText)return;const url=clipboardUrl(await clipboardText());if(!url){if(force){const button=document.querySelector('#pasteLinkButton');if(button){button.textContent='剪贴板中没有链接';setTimeout(()=>button.textContent='粘贴链接',1200)}}return;}if(!force&&localStorage.getItem('pinmind.lastClipboardLink')===url)return;showClipboardPrompt(url);}
 window.checkClipboardLink=checkClipboardLink;
+window.addEventListener('pinmind:daily-refresh',()=>loadLiveDigest());
 window.addEventListener('DOMContentLoaded',()=>{syncNativeCaptures();loadLiveDigest();setTimeout(()=>checkClipboardLink(),900);document.querySelector('#pasteLinkButton')?.addEventListener('click',()=>checkClipboardLink(true));});

@@ -123,17 +123,18 @@ function openPage(page, query='') {
 
 const todayDefault={
   date:document.querySelector('.date').textContent,
-  headline:document.querySelector('.knowledge-card h2').textContent
+  headline:document.querySelector('.knowledge-card h2')?.textContent||''
 };
 window.addEventListener('pinmind:digest-loaded',event=>{todayDefault.date=document.querySelector('.date').textContent;todayDefault.headline=event.detail.items[0]?.headline||todayDefault.headline;});
 document.querySelectorAll('.history-item').forEach(item=>item.classList.remove('current'));
-const historyKnowledgeCount=document.querySelectorAll('.knowledge-card').length;
+const historyKnowledgeCount=items.length;
 document.querySelectorAll('.history-item em').forEach(item=>item.textContent=`${historyKnowledgeCount} 条知识`);
 function resetTodayView(){
+  window.viewingToday=true;
   document.querySelectorAll('.history-item').forEach(item=>item.classList.remove('current'));
   document.querySelector('#todayPage h1').textContent='今日知识';
   document.querySelector('.date').textContent=todayDefault.date;
-  document.querySelector('.knowledge-card h2').textContent=todayDefault.headline;
+  const headline=document.querySelector('.knowledge-card h2');if(headline)headline.textContent=todayDefault.headline;
 }
 document.querySelectorAll('.nav-item[data-page]').forEach(item => item.addEventListener('click', () => {
   if(item.dataset.page==='today'){resetTodayView();window.loadLiveDigest?.();}
@@ -158,6 +159,7 @@ function historyDate(item){return item.querySelector('time').textContent;}
 document.querySelectorAll('.history-item').forEach(item=>{if(PinMindState.isRead(historyDate(item)))item.remove();});
 window.addEventListener('pinmind:read-state-changed',event=>{const day=event.detail.date.split(' · ')[0];document.querySelectorAll('.history-item').forEach(item=>{if(historyDate(item)===day)item.remove();});});
 document.querySelectorAll('.history-item').forEach(item=>item.addEventListener('click',()=>{
+  window.viewingToday=false;
   openPage('today');document.querySelectorAll('.history-item').forEach(row=>row.classList.toggle('current',row===item));
   document.querySelector('[data-page="today"]').classList.remove('active');
   document.querySelector('#todayPage h1').textContent='历史知识';
