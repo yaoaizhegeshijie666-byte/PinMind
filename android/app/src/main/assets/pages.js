@@ -177,7 +177,7 @@ pageHost.addEventListener('dragend', () => { if(draggedModule) draggedModule.cla
 pageHost.addEventListener('dragover', event => { const board=event.target.closest('.draggable-board'); if(!board||!draggedModule)return; event.preventDefault(); const target=event.target.closest('.knowledge-module'); if(target&&target!==draggedModule) board.insertBefore(draggedModule,target); else if(!target) board.appendChild(draggedModule); });
 pageHost.addEventListener('click', event => {
   const remove=event.target.closest('.module-delete');
-  if(remove){event.preventDefault();event.stopPropagation();const card=remove.closest('.knowledge-module'),key=card.dataset.id||card.querySelector('h3')?.textContent||'',set=storedSet('pinmind.deleted');set.add('module:'+key);saveSet('pinmind.deleted',set);card.classList.add('removing');setTimeout(()=>card.remove(),160);return;}
+  if(remove){event.preventDefault();event.stopPropagation();const card=remove.closest('.knowledge-module'),title=card.querySelector('h3')?.textContent||'',key=card.dataset.id||title,set=storedSet('pinmind.deleted');set.add('module:'+key);saveSet('pinmind.deleted',set);if(card.dataset.saved){const collected=storedSet('pinmind.collected');collected.delete(title);saveSet('pinmind.collected',collected);window.saveLibraryItem?.({headline:title},false);pageHost.querySelectorAll('[data-saved]').forEach(item=>{if(item!==card&&item.textContent.includes(title))item.remove();});}card.classList.add('removing');setTimeout(()=>card.remove(),160);return;}
   const view=event.target.closest('[data-library-view]');
   if(view?.dataset.libraryView==='graph'){
     const graphCount=pageHost.querySelectorAll('.knowledge-module').length;

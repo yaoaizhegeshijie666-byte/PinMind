@@ -32,6 +32,7 @@ const saveCollected=()=>localStorage.setItem('pinmind.collected',JSON.stringify(
 const libraryItems=()=>JSON.parse(localStorage.getItem('pinmind.libraryItems')||'[]');
 function saveLibraryItem(item,selected){const saved=libraryItems().filter(entry=>entry.headline!==item.headline);if(selected)saved.push(item);localStorage.setItem('pinmind.libraryItems',JSON.stringify(saved));window.dispatchEvent(new CustomEvent('pinmind:library-updated'));}
 window.saveLibraryItem=saveLibraryItem;
+items.filter(item=>collectedKeys.has(item.headline)&&!libraryItems().some(saved=>saved.headline===item.headline)).forEach(item=>saveLibraryItem(item,true));
 items.forEach((item, index) => {
   const article = document.createElement('article');
   article.className = `knowledge-card ${item.tone}`;
