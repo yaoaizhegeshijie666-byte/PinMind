@@ -2,7 +2,7 @@ FROM python:3.12-slim
 WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
-COPY server.py cloud_server.py cloud_database.py /app/
+COPY server.py database.py /app/
 ENV HOST=0.0.0.0 PORT=8787
 EXPOSE 8787
-CMD ["python", "cloud_server.py"]
+CMD ["python", "server.py"]
