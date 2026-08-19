@@ -105,28 +105,31 @@ class Handler(BaseHTTPRequestHandler):
     def send_headers(self,status=200):
         self.send_response(status);self.send_header('Content-Type','application/json; charset=utf-8')
         self.send_header('Access-Control-Allow-Origin',os.getenv('PINMIND_CORS_ORIGIN','*'))
-        self.send_header('Access-Control-Allow-Headers','Content-Type, Authorization');self.send_header('Access-Control-Allow-Methods','GET,POST,DELETE,OPTIONS');self.end_headers()
+        self.send_header('Access-Control-Allow-Headers','Content-Type, Authorization, X-PinMind-Client');self.send_header('Access-Control-Allow-Methods','GET,POST,DELETE,OPTIONS');self.end_headers()
     def send_json(self,data,status=200):self.send_headers(status);self.wfile.write(json.dumps(data,ensure_ascii=False).encode())
     def body(self):
         length=int(self.headers.get('Content-Length','0'))
         if length>9_000_000:raise ValueError('request_too_large')
         return json.loads(self.rfile.read(length) or b'{}')
+    def client_id(self):
+        value=self.headers.get('X-PinMind-Client','').strip()
+        return value[:96] if value else 'anonymous'
     def do_OPTIONS(self):self.send_headers(204)
     def do_GET(self):
         if self.path=='/health':return self.send_json({'ok':True,'ai_configured':bool(os.getenv('OPENROUTER_API_KEY')),'provider':'openrouter','model':MODEL})
         if not authorized(self):return self.send_json({'error':'unauthorized'},401)
         if self.path.startswith('/api/sources'):
-            with db() as conn:rows=conn.execute('SELECT * FROM sources ORDER BY captured_at DESC').fetchall()
+            with db() as conn:rows=conn.execute('SELECT * FROM sources WHERE owner_id=? ORDER BY captured_at DESC',(self.client_id(),)).fetchall()
             return self.send_json({'sources':[row_dict(x) for x in rows]})
         if self.path.startswith('/api/digests/history'):
             day=now_local().date().isoformat()
-            with db() as conn:rows=conn.execute("SELECT * FROM knowledge WHERE digest_date<? AND state IN (?,?) ORDER BY digest_date DESC,created_at",(day,'candidate','selected')).fetchall()
+            with db() as conn:rows=conn.execute("SELECT * FROM knowledge WHERE owner_id=? AND digest_date<? AND state IN (?,?) ORDER BY digest_date DESC,created_at",(self.client_id(),day,'candidate','selected')).fetchall()
             grouped={}
             for row in rows:grouped.setdefault(row['digest_date'],[]).append(row_dict(row))
             return self.send_json({'digests':[{'digest_date':date,'knowledge_items':items} for date,items in grouped.items()]})
         if self.path.startswith('/api/digests/today'):
             day=now_local().date().isoformat()
-            with db() as conn:rows=conn.execute('SELECT * FROM knowledge WHERE digest_date=? ORDER BY created_at',(day,)).fetchall()
+            with db() as conn:rows=conn.execute('SELECT * FROM knowledge WHERE owner_id=? AND digest_date=? ORDER BY created_at',(self.client_id(),day)).fetchall()
             return self.send_json({'digest_date':day,'knowledge_items':[row_dict(x) for x in rows]})
         self.send_json({'error':'not_found'},404)
     def do_POST(self):
@@ -152,7 +155,7 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:raise ValueError('invalid_image_data')
             input_type='screenshot'
         if url:
-            with db() as conn:existing=conn.execute('SELECT * FROM sources WHERE url=? ORDER BY captured_at DESC LIMIT 1',(url,)).fetchone()
+            with db() as conn:existing=conn.execute('SELECT * FROM sources WHERE owner_id=? AND url=? ORDER BY captured_at DESC LIMIT 1',(self.client_id(),url)).fetchone()
             if existing:
                 with db() as conn:conn.execute('UPDATE sources SET captured_at=?,starred=? WHERE id=?',(now_local().isoformat(),1 if data.get('starred') or existing['starred'] else 0,existing['id']))
                 return self.send_json({'source':row_dict(existing),'duplicate':True})
@@ -165,25 +168,25 @@ class Handler(BaseHTTPRequestHandler):
         elif len(content)<120 and not image:completeness='partial'
         item={'id':'src_'+uuid.uuid4().hex[:12],'input_type':input_type,'title':data.get('title') or (content[:60] if content else '截图来源'),
               'content':content,'url':url,'starred':1 if data.get('starred') else 0,'status':status,'captured_at':now_local().isoformat(),
-              'content_mime':data.get('content_mime'),'image_data':image or None,'completeness':completeness,'parse_status':parse_status}
-        with db() as conn:conn.execute('''INSERT INTO sources(id,input_type,title,content,url,starred,status,captured_at,content_mime,image_data,completeness,parse_status,generated_at,generated_knowledge_ids_json) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,NULL,'[]')''',tuple(item[k] for k in ('id','input_type','title','content','url','starred','status','captured_at','content_mime','image_data','completeness','parse_status')))
+              'content_mime':data.get('content_mime'),'image_data':image or None,'completeness':completeness,'parse_status':parse_status,'owner_id':self.client_id()}
+        with db() as conn:conn.execute('''INSERT INTO sources(id,input_type,title,content,url,starred,status,captured_at,content_mime,image_data,completeness,parse_status,generated_at,generated_knowledge_ids_json,owner_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,NULL,'[]',?)''',tuple(item[k] for k in ('id','input_type','title','content','url','starred','status','captured_at','content_mime','image_data','completeness','parse_status','owner_id')))
         return self.send_json({'source':row_dict(item)},201)
     def generate_digest(self):
         day=now_local().date().isoformat()
         with db() as conn:
-            sources=[dict(x) for x in conn.execute("SELECT * FROM sources WHERE generated_at IS NULL AND status='ready' AND parse_status='success' ORDER BY starred DESC,captured_at ASC LIMIT 12").fetchall()]
-            library=[dict(x) for x in conn.execute("SELECT id,headline FROM knowledge WHERE state='collected' ORDER BY created_at DESC LIMIT 30").fetchall()]
+            sources=[dict(x) for x in conn.execute("SELECT * FROM sources WHERE owner_id=? AND generated_at IS NULL AND status='ready' AND parse_status='success' ORDER BY starred DESC,captured_at ASC LIMIT 12",(self.client_id(),)).fetchall()]
+            library=[dict(x) for x in conn.execute("SELECT id,headline FROM knowledge WHERE owner_id=? AND state='collected' ORDER BY created_at DESC LIMIT 30",(self.client_id(),)).fetchall()]
         if not sources:return self.send_json({'error':'no_new_ready_sources'},409)
         items=validate_items(ai_generate(sources,library),sources,library)
         if not items:return self.send_json({'error':'no_supported_knowledge'},422)
         created=now_local().isoformat();knowledge_ids=[];by_source={x['id']:[] for x in sources}
         with db() as conn:
-            conn.execute('DELETE FROM knowledge WHERE digest_date=? AND state IN (?,?)',(day,'candidate','selected'))
+            conn.execute('DELETE FROM knowledge WHERE owner_id=? AND digest_date=? AND state IN (?,?)',(self.client_id(),day,'candidate','selected'))
             for item in items:
                 knowledge_id='kn_'+uuid.uuid4().hex[:12];knowledge_ids.append(knowledge_id)
                 for source_id in item['source_ids']:by_source[source_id].append(knowledge_id)
-                conn.execute('''INSERT INTO knowledge(id,digest_date,headline,sections_json,source_ids_json,topic_names_json,tags_json,state,created_at,type,related_knowledge_ids_json,content_completeness) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)''',
-                    (knowledge_id,day,item['headline'],json.dumps(item['sections'],ensure_ascii=False),json.dumps(item['source_ids']),json.dumps(item['topic_names'],ensure_ascii=False),json.dumps(item['tags'],ensure_ascii=False),'candidate',created,item['type'],json.dumps(item['related_knowledge_ids']),item['content_completeness']))
+                conn.execute('''INSERT INTO knowledge(id,digest_date,headline,sections_json,source_ids_json,topic_names_json,tags_json,state,created_at,type,related_knowledge_ids_json,content_completeness,owner_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                    (knowledge_id,day,item['headline'],json.dumps(item['sections'],ensure_ascii=False),json.dumps(item['source_ids']),json.dumps(item['topic_names'],ensure_ascii=False),json.dumps(item['tags'],ensure_ascii=False),'candidate',created,item['type'],json.dumps(item['related_knowledge_ids']),item['content_completeness'],self.client_id()))
             for source in sources:
                 conn.execute("UPDATE sources SET generated_at=?,status='generated',generated_knowledge_ids_json=?,image_data=NULL WHERE id=?",(created,json.dumps(by_source[source['id']]),source['id']))
             conn.upsert_digest(day,'ready',created,json.dumps([x['id'] for x in sources]))

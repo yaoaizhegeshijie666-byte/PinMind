@@ -1,10 +1,11 @@
 const PinMindAPI={
+  get clientId(){let id=localStorage.getItem('pinmind.clientId');if(!id){id='client_'+(crypto.randomUUID?.()||Date.now().toString(36)+Math.random().toString(36).slice(2));localStorage.setItem('pinmind.clientId',id)}return id},
   get base(){return (localStorage.getItem('pinmind.apiBase')||'https://pinmind-api.onrender.com').replace(/\/$/,'')},
-  async request(path,options={}){if(!this.base)throw new Error('BACKEND_NOT_CONFIGURED');const response=await fetch(this.base+path,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});const data=await response.json();if(!response.ok)throw new Error(data.error||`HTTP_${response.status}`);return data},
+  async request(path,options={}){if(!this.base)throw new Error('BACKEND_NOT_CONFIGURED');const response=await fetch(this.base+path,{...options,headers:{'Content-Type':'application/json','X-PinMind-Client':this.clientId,...(options.headers||{})}});const data=await response.json();if(!response.ok)throw new Error(data.error||`HTTP_${response.status}`);return data},
   health(){return this.request('/health')},
-  sources(){return this.request('/api/sources')},
-  today(){return this.request('/api/digests/today')},
-  history(){return this.request('/api/digests/history')},
+  sources(){return this.request('/api/sources').then(data=>({...data,sources:(data.sources||[]).filter(item=>item.owner_id===this.clientId)}))},
+  today(){return this.request('/api/digests/today').then(data=>({...data,knowledge_items:(data.knowledge_items||[]).filter(item=>item.owner_id===this.clientId)}))},
+  history(){return this.request('/api/digests/history').then(data=>({...data,digests:(data.digests||[]).map(digest=>({...digest,knowledge_items:(digest.knowledge_items||[]).filter(item=>item.owner_id===this.clientId)})).filter(digest=>digest.knowledge_items.length)}))},
   capture(item){return this.request('/api/sources',{method:'POST',body:JSON.stringify(item)})},
   generate(){return this.request('/api/digests/generate',{method:'POST',body:'{}'})}
 };

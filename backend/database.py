@@ -25,11 +25,11 @@ TABLES = (
 SOURCE_COLUMNS = {
     "content_mime": "TEXT", "image_data": "TEXT", "completeness": "TEXT DEFAULT 'complete'",
     "parse_status": "TEXT DEFAULT 'success'", "generated_at": "TEXT",
-    "generated_knowledge_ids_json": "TEXT DEFAULT '[]'",
+    "generated_knowledge_ids_json": "TEXT DEFAULT '[]'", "owner_id": "TEXT",
 }
 KNOWLEDGE_COLUMNS = {
     "type": "TEXT DEFAULT 'viewpoint'", "related_knowledge_ids_json": "TEXT DEFAULT '[]'",
-    "content_completeness": "TEXT DEFAULT 'complete'",
+    "content_completeness": "TEXT DEFAULT 'complete'", "owner_id": "TEXT",
 }
 DIGEST_COLUMNS = {"source_ids_json": "TEXT DEFAULT '[]'"}
 
@@ -61,6 +61,8 @@ class Database:
             self._columns("sources", SOURCE_COLUMNS)
             self._columns("knowledge", KNOWLEDGE_COLUMNS)
             self._columns("digests", DIGEST_COLUMNS)
+            self._remove_demo_records()
+            self._backfill_generated_sources()
     def _columns(self, table, columns):
         if self.postgres:
             for name, definition in columns.items():
