@@ -45,7 +45,7 @@ function renderKnowledgeItems(knowledgeItems,digestDate=window.currentDigestDate
     list.appendChild(article);
   });
 }
-window.renderKnowledgeItems=renderKnowledgeItems;
+list.addEventListener('click',event=>{const link=event.target.closest('.source-direct');if(!link)return;event.preventDefault();const url=link.getAttribute('href');if(!url||url==='#')return;window.PinMindNative?.openUrl?.(url);if(!window.PinMindNative)window.open(url,'_blank');});window.renderKnowledgeItems=renderKnowledgeItems;
 renderKnowledgeItems(items);
 const drawer = document.querySelector('#drawer');
 const scrim = document.querySelector('#scrim');

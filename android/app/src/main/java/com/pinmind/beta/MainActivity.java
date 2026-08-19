@@ -1,6 +1,11 @@
 package com.pinmind.beta;
 
 import android.app.Activity;
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
@@ -26,6 +31,8 @@ public class MainActivity extends Activity {
     private boolean pageReady;
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        DailyNotification.schedule(this,getSharedPreferences("pinmind_config",MODE_PRIVATE).getString("daily_time","22:00"));
+        if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},2200);
         webView=new WebView(this);
         webView.setLayerType(View.LAYER_TYPE_SOFTWARE,null);
         WebSettings settings=webView.getSettings();
@@ -48,7 +55,8 @@ public class MainActivity extends Activity {
         root.addView(statusView,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
         root.addView(webView,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
         webView.setWebViewClient(new WebViewClient(){
-            @Override public void onPageFinished(WebView view,String url){
+            @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request){return openExternal(request.getUrl());}
+            @Override public boolean shouldOverrideUrlLoading(WebView view,String url){return openExternal(Uri.parse(url));}            @Override public void onPageFinished(WebView view,String url){
                 pageReady=true;
                 syncCaptures();
             }
@@ -71,6 +79,7 @@ public class MainActivity extends Activity {
         }
     }
     private void syncCaptures(){webView.evaluateJavascript("if(typeof syncNativeCaptures==='function')syncNativeCaptures()",null);}
+    private boolean openExternal(Uri uri){if(uri==null||!("http".equals(uri.getScheme())||"https".equals(uri.getScheme())))return false;try{startActivity(new Intent(Intent.ACTION_VIEW,uri));return true;}catch(Exception ignored){return false;}}
     @Override protected void onResume(){super.onResume();if(pageReady)syncCaptures();}
     @Override public void onBackPressed(){if(webView.canGoBack())webView.goBack();else super.onBackPressed();}
     public class NativeBridge {
@@ -81,6 +90,9 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public void clearCaptures(){getSharedPreferences("pinmind_sources",MODE_PRIVATE).edit().remove("captures").apply();}
         @JavascriptInterface public void setApiBase(String value){getSharedPreferences("pinmind_config",MODE_PRIVATE).edit().putString("api_base",value).apply();}
+        @JavascriptInterface public void setDailyTime(String value){runOnUiThread(()->DailyNotification.schedule(MainActivity.this,value));}
+        @JavascriptInterface public void setNotificationsEnabled(boolean enabled){getSharedPreferences("pinmind_config",MODE_PRIVATE).edit().putBoolean("notifications_enabled",enabled).apply();runOnUiThread(()->{if(enabled)DailyNotification.schedule(MainActivity.this,getSharedPreferences("pinmind_config",MODE_PRIVATE).getString("daily_time","22:00"));else DailyNotification.cancel(MainActivity.this);});}
+        @JavascriptInterface public void openUrl(String value){runOnUiThread(()->openExternal(Uri.parse(value)));}
         private String findUrl(String text){for(String part:text.split("\\s+"))if(part.startsWith("http://")||part.startsWith("https://"))return part;return "";}
     }
 }

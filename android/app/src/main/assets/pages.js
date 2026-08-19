@@ -61,7 +61,7 @@ async function loadLiveSources(){
     const data=await PinMindAPI.sources();const sources=data.sources||[];
     table.querySelector('.source-state')?.remove();
     if(!sources.length){table.insertAdjacentHTML('beforeend','<div class="source-state">暂无来源，从微信、小红书或浏览器分享内容到 PinMind 后会显示在这里。</div>');return;}
-    sources.forEach(item=>{const view=sourcePresentation(item);table.insertAdjacentHTML('beforeend',`<button class="source-row" data-source-id="${escapeText(item.id)}" data-source-type="${view.type}" data-source-status="${view.status}"><i class="source-icon ${view.type}-icon">${view.label[0]}</i><span><strong>${escapeText(item.title||'未命名来源')}</strong><small>${escapeText(view.label[1])}</small></span><time>${sourceTime(item.captured_at)}</time><em class="${view.statusLabel[0]}">${view.statusLabel[1]}</em><b>${view.status==='complete'?'已保存':'—'}</b></button>`);});
+    sources.forEach(item=>{const view=sourcePresentation(item);table.insertAdjacentHTML('beforeend',`<button class="source-row" data-source-id="${escapeText(item.id)}" data-source-type="${view.type}" data-source-status="${view.status}" data-source-url="${escapeText(item.url||'')}"><i class="source-icon ${view.type}-icon">${view.label[0]}</i><span><strong>${escapeText(item.title||'未命名来源')}</strong><small>${escapeText(view.label[1])}</small></span><time>${sourceTime(item.captured_at)}</time><em class="${view.statusLabel[0]}">${view.statusLabel[1]}</em><b>${view.status==='complete'?'已保存':'—'}</b></button>`);});
     applySourceFilters();
   }catch(error){
     table.querySelector('.source-state')?.remove();
@@ -110,7 +110,7 @@ function renderSavedLibraryItems(){
 function openPage(page, query='') {
   document.querySelectorAll('.nav-item[data-page]').forEach(item => item.classList.toggle('active', item.dataset.page === page));
   if (page === 'today') { pageHost.hidden = true; todayPage.hidden = false; }
-  else { todayPage.hidden = true; pageHost.hidden = false; pageHost.innerHTML = page === 'search' ? pageTemplates.search(query) : pageTemplates[page]; if(page==='settings'){const time=pageHost.querySelector('input[type=time]');if(time)time.value=localStorage.getItem('pinmind.dailyTime')||'22:00';const api=pageHost.querySelector('#apiBaseInput');if(api)api.value=localStorage.getItem('pinmind.apiBase')||'';} }
+  else { todayPage.hidden = true; pageHost.hidden = false; pageHost.innerHTML = page === 'search' ? pageTemplates.search(query) : pageTemplates[page]; if(page==='settings'){const time=pageHost.querySelector('input[type=time]');if(time)time.value=localStorage.getItem('pinmind.dailyTime')||'22:00';const reminder=pageHost.querySelector('.switch');if(reminder)reminder.checked=localStorage.getItem('pinmind.notifications')!=='0';const api=pageHost.querySelector('#apiBaseInput');if(api)api.value=localStorage.getItem('pinmind.apiBase')||'';} }
   pageHost.querySelectorAll('[data-filter-toggle],[data-source-filter-toggle]').forEach(button=>button.textContent=button.textContent.replace(/⌄$/,''));
   document.querySelector('main').scrollTo({top: 0, behavior: 'smooth'});
   document.querySelector('#sidebar').classList.remove('open');
@@ -192,7 +192,7 @@ function showCaptureSheet() {
 
 pageHost.addEventListener('click', event => {
   const node = event.target.closest('.node'); if (node) { showDetail('knowledge', node.childNodes[0].textContent.trim()); return; }
-  const source = event.target.closest('.source-row'); if (source) { showDetail('source', source.querySelector('strong').textContent); return; }
+  const source=event.target.closest('.source-row');if(source){const url=source.dataset.sourceUrl;if(url){window.PinMindNative?.openUrl?.(url);if(!window.PinMindNative)window.open(url,'_blank');}else showDetail('source',source.querySelector('strong').textContent);return;}
   const collect=event.target.closest('.collect-small');if(collect){const card=collect.closest('.uncollected-card'),item=card._knowledgeItem,on=PinMindState.toggleCollected(item,item.digestDate);if(on){card.remove();if(!pageHost.querySelector('.uncollected-card'))renderUncollectedItems();}return;}
   if (event.target.closest('#captureButton')) showCaptureSheet();
 });
@@ -243,7 +243,7 @@ pageHost.addEventListener('click',event=>{
 document.addEventListener('click',event=>{if(!event.target.closest('.filter-control'))document.querySelectorAll('.filter-menu').forEach(menu=>menu.classList.remove('open'));});
 window.addEventListener('resize',updateGraphEdges);
 
-pageHost.addEventListener('change',event=>{if(event.target.matches('input[type=time]')){localStorage.setItem('pinmind.dailyTime',event.target.value);if(typeof updateDailySchedule==='function')updateDailySchedule();}});
+pageHost.addEventListener('change',event=>{if(event.target.matches('input[type=time]')){localStorage.setItem('pinmind.dailyTime',event.target.value);window.PinMindNative?.setDailyTime?.(event.target.value);if(typeof updateDailySchedule==='function')updateDailySchedule();}if(event.target.matches('.switch')){localStorage.setItem('pinmind.notifications',event.target.checked?'1':'0');window.PinMindNative?.setNotificationsEnabled?.(event.target.checked);}});
 
 
 function applySourceFilters(){const type=pageHost.dataset.sourceType||'all',status=pageHost.dataset.sourceStatus||'all';pageHost.querySelectorAll('.source-row').forEach(row=>{const hidden=(type!=='all'&&row.dataset.sourceType!==type)||(status!=='all'&&row.dataset.sourceStatus!==status);row.hidden=hidden;row.style.display=hidden?'none':'';});}
