@@ -3,6 +3,9 @@ package com.pinmind.beta;
 import android.app.Activity;
 import android.Manifest;
 import android.content.Intent;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -80,7 +83,7 @@ public class MainActivity extends Activity {
     }
     private void syncCaptures(){webView.evaluateJavascript("if(typeof syncNativeCaptures==='function')syncNativeCaptures()",null);}
     private boolean openExternal(Uri uri){if(uri==null||!("http".equals(uri.getScheme())||"https".equals(uri.getScheme())))return false;try{startActivity(new Intent(Intent.ACTION_VIEW,uri));return true;}catch(Exception ignored){return false;}}
-    @Override protected void onResume(){super.onResume();if(pageReady)syncCaptures();}
+    @Override protected void onResume(){super.onResume();if(pageReady){syncCaptures();webView.evaluateJavascript("if(typeof checkClipboardLink==='function')checkClipboardLink()",null);}}
     @Override public void onBackPressed(){if(webView.canGoBack())webView.goBack();else super.onBackPressed();}
     public class NativeBridge {
         @JavascriptInterface public String getCaptures(){
@@ -89,6 +92,7 @@ public class MainActivity extends Activity {
             return result.toString();
         }
         @JavascriptInterface public void clearCaptures(){getSharedPreferences("pinmind_sources",MODE_PRIVATE).edit().remove("captures").apply();}
+        @JavascriptInterface public String getClipboardText(){try{ClipboardManager clipboard=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);if(clipboard==null||!clipboard.hasPrimaryClip())return "";ClipData clip=clipboard.getPrimaryClip();if(clip==null||clip.getItemCount()==0)return "";CharSequence text=clip.getItemAt(0).coerceToText(MainActivity.this);return text==null?"":text.toString();}catch(Exception ignored){return "";}}
         @JavascriptInterface public void setApiBase(String value){getSharedPreferences("pinmind_config",MODE_PRIVATE).edit().putString("api_base",value).apply();}
         @JavascriptInterface public void setDailyTime(String value){runOnUiThread(()->DailyNotification.schedule(MainActivity.this,value));}
         @JavascriptInterface public void setNotificationsEnabled(boolean enabled){getSharedPreferences("pinmind_config",MODE_PRIVATE).edit().putBoolean("notifications_enabled",enabled).apply();runOnUiThread(()->{if(enabled)DailyNotification.schedule(MainActivity.this,getSharedPreferences("pinmind_config",MODE_PRIVATE).getString("daily_time","22:00"));else DailyNotification.cancel(MainActivity.this);});}

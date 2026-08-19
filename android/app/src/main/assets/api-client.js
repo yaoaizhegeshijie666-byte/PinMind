@@ -33,4 +33,13 @@ async function loadLiveDigest(){
   }catch(error){console.warn('PinMind digest offline',error.message)}
 }
 window.loadLiveDigest=loadLiveDigest;
-window.addEventListener('DOMContentLoaded',()=>{syncNativeCaptures();loadLiveDigest()});
+const clipboardUrl=text=>String(text||'').match(/https?:\/\/[^\s]+/i)?.[0]?.replace(/[，。；、）】》]+$/,'')||'';
+async function clipboardText(){if(window.PinMindNative?.getClipboardText)return window.PinMindNative.getClipboardText();try{return await navigator.clipboard.readText()}catch{return''}}
+function showClipboardPrompt(url){
+  document.querySelector('.clipboard-prompt')?.remove();const prompt=document.createElement('aside');prompt.className='clipboard-prompt';prompt.innerHTML='<strong>检测到文章链接</strong><small></small><div class="clipboard-actions"><button class="dismiss-clipboard">暂不保存</button><button class="save-clipboard">保存到 PinMind</button></div>';prompt.querySelector('small').textContent=url;document.body.appendChild(prompt);
+  prompt.querySelector('.dismiss-clipboard').addEventListener('click',()=>{localStorage.setItem('pinmind.lastClipboardLink',url);prompt.remove();});
+  prompt.querySelector('.save-clipboard').addEventListener('click',async event=>{const button=event.currentTarget;button.disabled=true;button.textContent='正在保存…';try{await PinMindAPI.capture({input_type:'shared_link',title:'剪贴板文章链接',content:url,url});localStorage.setItem('pinmind.lastClipboardLink',url);button.textContent='✓ 已保存';window.dispatchEvent(new CustomEvent('pinmind:sources-updated'));setTimeout(()=>prompt.remove(),700)}catch(error){button.disabled=false;button.textContent='保存失败，重试';}});
+}
+async function checkClipboardLink(force=false){if(!force&&!window.PinMindNative?.getClipboardText)return;const url=clipboardUrl(await clipboardText());if(!url){if(force){const button=document.querySelector('#pasteLinkButton');if(button){button.textContent='剪贴板中没有链接';setTimeout(()=>button.textContent='粘贴链接',1200)}}return;}if(!force&&localStorage.getItem('pinmind.lastClipboardLink')===url)return;showClipboardPrompt(url);}
+window.checkClipboardLink=checkClipboardLink;
+window.addEventListener('DOMContentLoaded',()=>{syncNativeCaptures();loadLiveDigest();setTimeout(()=>checkClipboardLink(),900);document.querySelector('#pasteLinkButton')?.addEventListener('click',()=>checkClipboardLink(true));});
