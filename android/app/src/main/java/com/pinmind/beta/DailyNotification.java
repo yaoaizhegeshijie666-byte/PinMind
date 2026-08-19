@@ -14,7 +14,7 @@ public final class DailyNotification {
     static final int ALARM_ID=2200;
     private DailyNotification(){}
     public static void schedule(Context context,String value){
-        if(!context.getSharedPreferences("pinmind_config",Context.MODE_PRIVATE).getBoolean("notifications_enabled",true)){cancel(context);return;}
+
         String[] parts=(value==null?"22:00":value).split(":");
         int hour=parts.length>0?number(parts[0],22):22,minute=parts.length>1?number(parts[1],0):0;
         context.getSharedPreferences("pinmind_config",Context.MODE_PRIVATE).edit().putString("daily_time",String.format("%02d:%02d",hour,minute)).apply();
