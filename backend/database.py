@@ -56,14 +56,14 @@ class Database:
             query = query.replace("?", "%s")
         return self.connection.execute(query, params or ())
     def ensure_schema(self):
-        with self.connection:
-            for statement in TABLES:
-                self.connection.execute(statement)
-            self._columns("sources", SOURCE_COLUMNS)
-            self._columns("knowledge", KNOWLEDGE_COLUMNS)
-            self._columns("digests", DIGEST_COLUMNS)
-            self._remove_demo_records()
-            self._backfill_generated_sources()
+        for statement in TABLES:
+            self.connection.execute(statement)
+        self._columns("sources", SOURCE_COLUMNS)
+        self._columns("knowledge", KNOWLEDGE_COLUMNS)
+        self._columns("digests", DIGEST_COLUMNS)
+        self._remove_demo_records()
+        self._backfill_generated_sources()
+        self.connection.commit()
     def _columns(self, table, columns):
         if self.postgres:
             for name, definition in columns.items():
