@@ -25,6 +25,7 @@ async function loadLiveDigest(){
       return {tone:tones[index%tones.length],topic:item.topic_names?.[0]||'今日知识',headline:item.headline,paragraphs:(item.sections||[]).map(section=>section.content).filter(Boolean),title:'核心内容',points:item.tags||[],source:source?.title||'PinMind AI 整理',url:source?.url||'#'};
     });
     window.renderKnowledgeItems(liveItems);
+    const intro=document.querySelector('.intro p');if(intro)intro.textContent='从你今天捕捉的内容中，PinMind 整理了 '+liveItems.length+' 条值得留下的知识。';
     const date=new Date(`${data.digest_date}T00:00:00+08:00`),weekdays=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
     document.querySelector('.date').textContent=`${date.getMonth()+1}月${date.getDate()}日 · ${weekdays[date.getDay()]}`;
     window.applyReadState?.();
