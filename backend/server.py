@@ -61,71 +61,33 @@ def row_dict(row):
     result.pop('image_data',None)
     return result
 
-SECTION={'type':'object','additionalProperties':False,'required':['kind','title','content','items'],'properties':{
-    'kind':{'type':'string','enum':['explanation','condition','mechanism','framework','evidence','example','boundary','implication']},
-    'title':{'type':'string'},'content':{'type':'string'},'items':{'type':'array','items':{'type':'string'}}}}
+SECTION={'type':'object','additionalProperties':False,'required':['kind','level','title','content','items'],'properties':{
+    'kind':{'type':'string','enum':['overview','explanation','condition','mechanism','framework','evidence','example','boundary','implication']},
+    'level':{'type':'integer','minimum':0,'maximum':3},'title':{'type':'string'},
+    'content':{'type':'string'},'items':{'type':'array','items':{'type':'string'}}}}
 SCHEMA={'type':'object','additionalProperties':False,'required':['knowledge_items'],'properties':{'knowledge_items':{
-    'type':'array','maxItems':10,'items':{'type':'object','additionalProperties':False,
-    'required':['type','headline','sections','source_ids','related_knowledge_ids','topic_names','tags','content_completeness'],
+    'type':'array','maxItems':32,'items':{'type':'object','additionalProperties':False,
+    'required':['type','headline','graph_label','sections','source_ids','related_knowledge_ids','topic_names','tags','content_completeness'],
     'properties':{'type':{'type':'string','enum':['viewpoint','method','trend','concept','case']},
-    'headline':{'type':'string','minLength':1},'sections':{'type':'array','minItems':2,'maxItems':6,'items':SECTION},
+    'headline':{'type':'string','minLength':1},'graph_label':{'type':'string','minLength':2,'maxLength':10},'sections':{'type':'array','minItems':2,'maxItems':24,'items':SECTION},
     'source_ids':{'type':'array','minItems':1,'items':{'type':'string'}},
     'related_knowledge_ids':{'type':'array','items':{'type':'string'}},
     'topic_names':{'type':'array','minItems':1,'items':{'type':'string'}},
     'tags':{'type':'array','items':{'type':'string'}},
     'content_completeness':{'type':'string','enum':['complete','partial']}}}}}}
 
-def ai_generate(sources,library):
-    key=os.getenv('OPENROUTER_API_KEY')
-    if not key:raise RuntimeError('OPENROUTER_API_KEY_NOT_CONFIGURED')
-    instructions='''你是一名擅长制作高质量学习笔记的知识编辑。
+OUTLINE_SECTION={'type':'object','additionalProperties':False,'required':['level','title','central_idea'],'properties':{
+    'level':{'type':'integer','minimum':1,'maximum':3},'title':{'type':'string'},'central_idea':{'type':'string'}}}
+OUTLINE_SCHEMA={'type':'object','additionalProperties':False,'required':['documents'],'properties':{'documents':{
+    'type':'array','maxItems':20,'items':{'type':'object','additionalProperties':False,
+    'required':['source_id','document_title','overview','outline','content_completeness'],'properties':{
+    'source_id':{'type':'string'},'document_title':{'type':'string'},'overview':{'type':'string'},
+    'outline':{'type':'array','minItems':1,'maxItems':24,'items':OUTLINE_SECTION},
+    'content_completeness':{'type':'string','enum':['complete','partial']}}}}}}
 
-你的任务不是总结文章讲了什么，而是从内容中提取值得用户长期记忆、复习和再次使用的知识。
-
-请完整阅读输入内容，识别其中具有信息价值的：
-1. 明确观点或结论
-2. 事实、数字和研究结果
-3. 因果关系与运作机制
-4. 判断问题的框架
-5. 可执行的方法和步骤
-6. 案例及其证明的观点
-7. 结论成立的条件、限制和反例
-
-输出要求：
-- 每条知识必须可以脱离原文独立理解。
-- 直接陈述知识，不使用“文章主要讲了”“作者认为”“视频介绍了”等第三人称转述。
-- 不得把具体内容压缩成“某事很重要”“需要重视某事”等空泛结论。
-- 保留关键数字、条件、对象、步骤、因果关系和案例。
-- 不得为了简短而遗漏高价值内容。
-- 每条知识只表达一个主要问题，但可以包含支撑它的多个子知识点。
-- 内容复杂时使用分段、编号或项目符号。
-- 每个事实和观点必须能在原始内容中找到依据，不得补充原文没有提供的事实。
-- 内容不完整时必须明确标记，不得假装理解全文。
-- 知识点数量根据信息密度决定，不固定为三条或五条；信息充足时最多输出十张卡片。
-- 相同观点只保留信息最完整的一条。如果多个观点属于同一主题，将其组织成一张结构化知识卡片。
-
-工作顺序：先在内部提取完整候选知识，再去重和组卡，最后只输出最终知识卡，不输出分析过程。
-
-结构要求：
-- headline 写成可独立记忆的核心结论，不写主题名称或文章摘要。
-- 每张卡使用 2—6 个 sections。按内容选择“核心结论、事实与证据、因果机制、判断框架、方法步骤、案例、适用条件、限制与反例”等标题。
-- section.content 用完整句解释知识；section.items 放置可复习的数字、步骤、判断问题或对比项。
-- 像“AI 产品需要重视用户控制权”这种只有方向、没有条件和机制的表述不合格。合格知识必须说明自动化边界由哪些风险和可撤销性决定，并给出判断条件、操作节点或来源中的具体例子。
-- 上述 AI 示例仅用于说明知识密度，禁止把示例中的事实写入与其无关的来源。
-- 每条必须引用真实 SOURCE_ID；截图需要理解画面文字与结构；关联只能引用给定的正式知识 ID。输出中文并严格遵守 JSON Schema。'''
-    blocks=[]
-    for source in sources:
-        text=(source.get('content') or '').strip()
-        blocks.append(f"SOURCE_ID: {source['id']}\nTYPE: {source['input_type']}\nTITLE: {source.get('title') or ''}\nCOMPLETENESS: {source.get('completeness') or 'complete'}\nTEXT:\n{text[:min(30000,max(6000,70000//max(1,len(sources))))]}")
-    related='\n'.join(f"{x['id']}: {x['headline']}" for x in library) or '无'
-    content=[{'type':'text','text':instructions+'\n\n新来源：\n'+'\n\n'.join(blocks)+'\n\n可关联的正式知识：\n'+related}]
-    for source in sources:
-        image=source.get('image_data')
-        if image:
-            mime=source.get('content_mime') or 'image/jpeg'
-            content.extend([{'type':'text','text':f"以下图片属于 SOURCE_ID: {source['id']}"},{'type':'image_url','image_url':{'url':f'data:{mime};base64,{image}'}}])
+def openrouter_json(key,schema,name,content):
     payload={'model':MODEL,'messages':[{'role':'user','content':content}],
-             'response_format':{'type':'json_schema','json_schema':{'name':'pinmind_digest','strict':True,'schema':SCHEMA}}}
+             'response_format':{'type':'json_schema','json_schema':{'name':name,'strict':True,'schema':schema}}}
     headers={'Authorization':f'Bearer {key}','Content-Type':'application/json','HTTP-Referer':'https://github.com/yaoaizhegeshijie666-byte/PinMind','X-Title':'PinMind'}
     req=Request('https://openrouter.ai/api/v1/chat/completions',data=json.dumps(payload).encode(),headers=headers)
     try:
@@ -136,16 +98,77 @@ def ai_generate(sources,library):
     if not output:raise RuntimeError('OPENROUTER_EMPTY_OUTPUT')
     return json.loads(output)
 
+def ai_generate(sources,library):
+    key=os.getenv('OPENROUTER_API_KEY')
+    if not key:raise RuntimeError('OPENROUTER_API_KEY_NOT_CONFIGURED')
+    blocks=[];per_source=max(2500,min(30000,90000//max(1,len(sources))))
+    for source in sources:
+        body=(source.get('content') or '').strip()
+        blocks.append(f"SOURCE_ID: {source['id']}\nTYPE: {source['input_type']}\nTITLE: {source.get('title') or ''}\nCOMPLETENESS: {source.get('completeness') or 'complete'}\nTEXT:\n{body[:per_source]}")
+    source_text='\n\n'.join(blocks)
+    outline_prompt="""你是学习笔记的结构编辑。先识别每份来源的真实知识骨架，不写摘要，不跨来源合并。
+对每个 SOURCE_ID：保留有信息意义的原文主标题和副标题；原文没有标题时，根据论证关系谨慎还原层级。
+overview 用一句话列出理解全文所需的主要维度，例如“从用户、商家、平台和基础设施四个层面理解”。
+outline 按阅读顺序输出，level=1/2/3 对应 Markdown 的二至四级标题。每个 central_idea 必须说明本节中心思想，避免“需要重视、非常重要”等空话。
+不能确认完整结构时标记 partial，不得补充原文没有的章节。输出中文并严格遵守 JSON Schema。\n\n来源：\n"""
+    outline_content=[{'type':'text','text':outline_prompt+source_text}]
+    for source in sources:
+        image=source.get('image_data')
+        if image:
+            mime=source.get('content_mime') or 'image/jpeg'
+            outline_content.extend([{'type':'text','text':f"以下图片属于 SOURCE_ID: {source['id']}"},{'type':'image_url','image_url':{'url':f'data:{mime};base64,{image}'}}])
+    outlines=openrouter_json(key,OUTLINE_SCHEMA,'pinmind_outline',outline_content)
+    outlined={x.get('source_id') for x in outlines.get('documents',[])}
+    for source in sources:
+        if source['id'] in outlined:continue
+        body=(source.get('content') or '').strip()
+        outlines.setdefault('documents',[]).append({'source_id':source['id'],'document_title':source.get('title') or '结构化知识笔记','overview':'该来源内容不完整，仅整理当前可以确认的信息。','outline':[{'level':1,'title':'可确认的核心内容','central_idea':body[:300] or '图片内容需要结合原始来源复核。'}],'content_completeness':'partial'})
+    instructions="""你是制作“学霸复习笔记”的知识编辑。根据已经识别的文章骨架提炼知识，不是概括文章讲了什么。
+
+成功标准：
+- 用户先扫标题层级就能恢复全文结构，再展开标题复习重点。
+- 每份有有效信息的 SOURCE_ID 至少出现在一张卡片中；低密度来源只生成一张，信息密度高且包含多个独立主题时才拆成多张。数量不得固定为三条、五条或其他目标值。
+- 每张卡第一节必须是 kind=overview、level=0，title=“知识骨架”，content 给出统领全文的维度，items 按顺序列出一级主题。
+- 后续 sections 严格沿用给定 OUTLINE 的顺序与层级。level=1/2/3 对应主标题、副标题和更深标题；标题优先复用原文。
+- 每节 content 用一两句话写清中心思想；items 只保留帮助复习的观点、事实、数字、机制、步骤、案例、条件或反例。
+- 不把局部细节提升为全文结论，不把具体内容压缩成“很重要、要重视、保证质量”等空泛表达。
+- 每个事实必须来自原始来源；内容不完整时标记 partial；不得编造缺失部分。
+- headline 是整张笔记的主题，不使用夸张的单一结论替代文章框架。
+- graph_label 是知识图谱节点名：提炼 2—8 个汉字的领域或核心概念关键词（如“直播电商”“AI产品评测”），不得复制长标题，不写完整句子。
+- 相同信息只保留一次。关联只能引用给定知识 ID。输出中文并严格遵守 JSON Schema。"""
+    related='\n'.join(f"{x['id']}: {x['headline']}" for x in library) or '无'
+    content=[{'type':'text','text':instructions+'\n\n文章骨架：\n'+json.dumps(outlines,ensure_ascii=False)+'\n\n原始来源：\n'+source_text+'\n\n可关联知识：\n'+related}]
+    for source in sources:
+        image=source.get('image_data')
+        if image:
+            mime=source.get('content_mime') or 'image/jpeg'
+            content.extend([{'type':'text','text':f"以下图片属于 SOURCE_ID: {source['id']}"},{'type':'image_url','image_url':{'url':f'data:{mime};base64,{image}'}}])
+    result=openrouter_json(key,SCHEMA,'pinmind_digest',content)
+    covered={source_id for item in result.get('knowledge_items',[]) for source_id in item.get('source_ids',[])}
+    for document in outlines.get('documents',[]):
+        source_id=document.get('source_id')
+        if not source_id or source_id in covered:continue
+        outline=document.get('outline',[])
+        sections=[{'kind':'overview','level':0,'title':'知识骨架','content':document.get('overview',''),'items':[x.get('title','') for x in outline if x.get('level')==1 and x.get('title')]}]
+        sections.extend({'kind':'explanation','level':x.get('level',1),'title':x.get('title','知识要点'),'content':x.get('central_idea',''),'items':[]} for x in outline)
+        result.setdefault('knowledge_items',[]).append({'type':'concept','headline':document.get('document_title') or '结构化知识笔记','graph_label':(document.get('document_title') or '知识笔记')[:8],'sections':sections,'source_ids':[source_id],'related_knowledge_ids':[],'topic_names':['未分类'],'tags':[],'content_completeness':document.get('content_completeness','partial')})
+    return result
+
 def validate_items(result,sources,library):
     source_ids={x['id'] for x in sources};library_ids={x['id'] for x in library};valid=[]
     for item in result.get('knowledge_items',[]):
         refs=[x for x in item.get('source_ids',[]) if x in source_ids]
         sections=[x for x in item.get('sections',[]) if (x.get('content') or x.get('items'))]
         if not item.get('headline') or not refs or not sections:continue
+        label=(item.get('graph_label') or (item.get('topic_names') or ['知识']) [0]).strip()
+        item['graph_label']=label[:10] or '知识'
+        for section in sections:section['level']=max(0,min(3,int(section.get('level',1))))
         item['source_ids']=refs;item['sections']=sections
         item['related_knowledge_ids']=[x for x in item.get('related_knowledge_ids',[]) if x in library_ids]
         valid.append(item)
-    return valid[:10]
+    covered={source_id for item in valid for source_id in item['source_ids']}
+    if covered!=source_ids:raise RuntimeError('AI_SOURCE_COVERAGE_INCOMPLETE')
+    return valid[:32]
 
 class Handler(BaseHTTPRequestHandler):
     def send_headers(self,status=200):
@@ -225,7 +248,7 @@ class Handler(BaseHTTPRequestHandler):
     def generate_digest(self):
         day=now_local().date().isoformat()
         with db() as conn:
-            sources=[dict(x) for x in conn.execute("SELECT * FROM sources WHERE owner_id=? AND generated_at IS NULL AND status='ready' AND parse_status='success' ORDER BY starred DESC,captured_at ASC LIMIT 12",(self.client_id(),)).fetchall()]
+            sources=[dict(x) for x in conn.execute("SELECT * FROM sources WHERE owner_id=? AND generated_at IS NULL AND status='ready' AND parse_status='success' ORDER BY starred DESC,captured_at ASC LIMIT 20",(self.client_id(),)).fetchall()]
             library=[dict(x) for x in conn.execute("SELECT id,headline FROM knowledge WHERE owner_id=? AND state='collected' ORDER BY created_at DESC LIMIT 30",(self.client_id(),)).fetchall()]
         if not sources:return self.send_json({'error':'no_new_ready_sources'},409)
         items=validate_items(ai_generate(sources,library),sources,library)
@@ -236,8 +259,8 @@ class Handler(BaseHTTPRequestHandler):
             for item in items:
                 knowledge_id='kn_'+uuid.uuid4().hex[:12];knowledge_ids.append(knowledge_id)
                 for source_id in item['source_ids']:by_source[source_id].append(knowledge_id)
-                conn.execute('''INSERT INTO knowledge(id,digest_date,headline,sections_json,source_ids_json,topic_names_json,tags_json,state,created_at,type,related_knowledge_ids_json,content_completeness,owner_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                    (knowledge_id,day,item['headline'],json.dumps(item['sections'],ensure_ascii=False),json.dumps(item['source_ids']),json.dumps(item['topic_names'],ensure_ascii=False),json.dumps(item['tags'],ensure_ascii=False),'candidate',created,item['type'],json.dumps(item['related_knowledge_ids']),item['content_completeness'],self.client_id()))
+                conn.execute('''INSERT INTO knowledge(id,digest_date,headline,graph_label,sections_json,source_ids_json,topic_names_json,tags_json,state,created_at,type,related_knowledge_ids_json,content_completeness,owner_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                    (knowledge_id,day,item['headline'],item['graph_label'],json.dumps(item['sections'],ensure_ascii=False),json.dumps(item['source_ids']),json.dumps(item['topic_names'],ensure_ascii=False),json.dumps(item['tags'],ensure_ascii=False),'candidate',created,item['type'],json.dumps(item['related_knowledge_ids']),item['content_completeness'],self.client_id()))
             for source in sources:
                 conn.execute("UPDATE sources SET generated_at=?,status='generated',generated_knowledge_ids_json=?,image_data=NULL WHERE id=?",(created,json.dumps(by_source[source['id']]),source['id']))
             conn.upsert_digest(day,'ready',created,json.dumps([x['id'] for x in sources]))

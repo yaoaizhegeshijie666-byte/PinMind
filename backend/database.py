@@ -14,7 +14,7 @@ TABLES = (
        content_mime TEXT,image_data TEXT,completeness TEXT DEFAULT 'complete',
        parse_status TEXT DEFAULT 'success',generated_at TEXT,generated_knowledge_ids_json TEXT DEFAULT '[]')""",
     """CREATE TABLE IF NOT EXISTS knowledge(
-       id TEXT PRIMARY KEY,digest_date TEXT NOT NULL,headline TEXT NOT NULL,sections_json TEXT NOT NULL,
+       id TEXT PRIMARY KEY,digest_date TEXT NOT NULL,headline TEXT NOT NULL,graph_label TEXT,sections_json TEXT NOT NULL,
        source_ids_json TEXT NOT NULL,topic_names_json TEXT NOT NULL,tags_json TEXT NOT NULL,
        state TEXT DEFAULT 'candidate',created_at TEXT NOT NULL,type TEXT DEFAULT 'viewpoint',
        related_knowledge_ids_json TEXT DEFAULT '[]',content_completeness TEXT DEFAULT 'complete')""",
@@ -29,7 +29,7 @@ SOURCE_COLUMNS = {
     "generated_knowledge_ids_json": "TEXT DEFAULT '[]'", "owner_id": "TEXT",
 }
 KNOWLEDGE_COLUMNS = {
-    "type": "TEXT DEFAULT 'viewpoint'", "related_knowledge_ids_json": "TEXT DEFAULT '[]'",
+    "graph_label": "TEXT", "type": "TEXT DEFAULT 'viewpoint'", "related_knowledge_ids_json": "TEXT DEFAULT '[]'",
     "content_completeness": "TEXT DEFAULT 'complete'", "owner_id": "TEXT",
 }
 DIGEST_COLUMNS = {"source_ids_json": "TEXT DEFAULT '[]'"}

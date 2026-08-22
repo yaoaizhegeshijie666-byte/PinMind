@@ -8,6 +8,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.provider.Settings;
 import android.os.Build;
 import android.graphics.Color;
 import android.graphics.Bitmap;
@@ -88,6 +89,10 @@ public class MainActivity extends Activity {
             statusView.setVisibility(TextView.VISIBLE);statusView.setText("PinMind 加载失败 · "+error.getClass().getSimpleName()+": "+error.getMessage());
         }
     }
+    private void requestNotificationAccess(){
+        if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},2200);return;}
+        if(Build.VERSION.SDK_INT>=31&&!DailyNotification.canScheduleExactly(this)){try{startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:"+getPackageName())));}catch(Exception ignored){startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+getPackageName())));}}
+    }
     private void syncCaptures(){webView.evaluateJavascript("if(typeof syncNativeCaptures==='function')syncNativeCaptures()",null);}
     private boolean openExternal(Uri uri){if(uri==null||!("http".equals(uri.getScheme())||"https".equals(uri.getScheme())))return false;try{startActivity(new Intent(Intent.ACTION_VIEW,uri));return true;}catch(Exception ignored){return false;}}
     private void configureSystemBars(){
@@ -98,7 +103,7 @@ public class MainActivity extends Activity {
         if(Build.VERSION.SDK_INT>=29){window.setStatusBarContrastEnforced(false);window.setNavigationBarContrastEnforced(false);}
         if(Build.VERSION.SDK_INT>=30)window.setDecorFitsSystemWindows(true);
     }
-    @Override protected void onResume(){super.onResume();if(pageReady){syncCaptures();webView.evaluateJavascript("if(typeof checkClipboardLink==='function')checkClipboardLink()",null);}}
+    @Override protected void onResume(){super.onResume();if(getSharedPreferences("pinmind_config",MODE_PRIVATE).getBoolean("notifications_enabled",true))DailyNotification.schedule(this,getSharedPreferences("pinmind_config",MODE_PRIVATE).getString("daily_time","22:00"));if(pageReady){syncCaptures();webView.evaluateJavascript("if(typeof checkClipboardLink==='function')checkClipboardLink()",null);}}
     @Override public void onBackPressed(){if(webView.canGoBack())webView.goBack();else super.onBackPressed();}
     public class NativeBridge {
         @JavascriptInterface public String getCaptures(){
@@ -111,7 +116,9 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void setApiBase(String value){getSharedPreferences("pinmind_config",MODE_PRIVATE).edit().putString("api_base",value).apply();}
         @JavascriptInterface public void setClientId(String value){getSharedPreferences("pinmind_config",MODE_PRIVATE).edit().putString("client_id",value).apply();}
         @JavascriptInterface public void setDailyTime(String value){runOnUiThread(()->DailyNotification.schedule(MainActivity.this,value));}
-        @JavascriptInterface public void setNotificationsEnabled(boolean enabled){getSharedPreferences("pinmind_config",MODE_PRIVATE).edit().putBoolean("notifications_enabled",enabled).apply();runOnUiThread(()->DailyNotification.schedule(MainActivity.this,getSharedPreferences("pinmind_config",MODE_PRIVATE).getString("daily_time","22:00")));}
+        @JavascriptInterface public void setNotificationsEnabled(boolean enabled){getSharedPreferences("pinmind_config",MODE_PRIVATE).edit().putBoolean("notifications_enabled",enabled).apply();runOnUiThread(()->{if(enabled){requestNotificationAccess();DailyNotification.schedule(MainActivity.this,getSharedPreferences("pinmind_config",MODE_PRIVATE).getString("daily_time","22:00"));}else DailyNotification.cancel(MainActivity.this);});}
+        @JavascriptInterface public String getNotificationStatus(){if(!DailyNotification.canNotify(MainActivity.this))return "通知权限未开启";if(!DailyNotification.canScheduleExactly(MainActivity.this))return "需开启精确定时权限";return "通知和定时权限已就绪";}
+        @JavascriptInterface public void requestNotificationAccess(){runOnUiThread(()->MainActivity.this.requestNotificationAccess());}
         @JavascriptInterface public void copyText(String value){ClipboardManager clipboard=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);if(clipboard!=null)clipboard.setPrimaryClip(ClipData.newPlainText("PinMind Markdown",value==null?"":value));}
         @JavascriptInterface public void openUrl(String value){runOnUiThread(()->openExternal(Uri.parse(value)));}
         private String encodeImage(String paths){
