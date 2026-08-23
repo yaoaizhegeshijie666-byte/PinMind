@@ -4,7 +4,13 @@ window.currentDigestDate=document.querySelector('.date').textContent.split(' · 
 window.currentKnowledgeItems=[];window.viewingToday=true;
 const safeUrl=value=>/^https?:\/\//i.test(value||'')?value:'#';
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-function dailyTimeReached(){const now=new Date(),time=localStorage.getItem('pinmind.dailyTime')||'22:00';return now.toTimeString().slice(0,5)>=time;}
+function localDateKey(value=new Date()){return value.getFullYear()+'-'+String(value.getMonth()+1).padStart(2,'0')+'-'+String(value.getDate()).padStart(2,'0')}
+function scheduledAt(value=new Date()){const time=localStorage.getItem('pinmind.dailyTime')||'22:00',[hour,minute]=time.split(':').map(Number),scheduled=new Date(value);scheduled.setHours(hour||0,minute||0,0,0);return scheduled}
+function dailyTimeReached(value=new Date()){return value.getTime()>=scheduledAt(value).getTime()}
+function scheduleRunKey(value=new Date()){return localDateKey(value)+'|'+(localStorage.getItem('pinmind.dailyTime')||'22:00')}
+function isCurrentScheduledDigest(data,value=new Date()){if(!data||data.digest_date!==localDateKey(value)||!dailyTimeReached(value))return false;const times=(data.knowledge_items||[]).map(item=>Date.parse(item.created_at||'')).filter(Number.isFinite);return times.length>0&&Math.max(...times)>=scheduledAt(value).getTime()}
+function shouldRunDailyDigest(value=new Date()){return dailyTimeReached(value)&&localStorage.getItem('pinmind.lastDigestRun')!==scheduleRunKey(value)}
+window.PinMindSchedule={localDateKey,scheduledAt,scheduleRunKey,isCurrentScheduledDigest,shouldRunDailyDigest};
 function showDigestState(title,message){window.currentKnowledgeItems=[];window.viewingToday=true;list.hidden=false;list.innerHTML=`<section class="empty-state"><span>◷</span><h2>${escapeHtml(title)}</h2><p>${escapeHtml(message)}</p></section>`;const intro=document.querySelector('.intro p');if(intro)intro.textContent=message;const button=document.querySelector('#readButton');if(button)button.hidden=true;}
 function showDigestWaiting(){const time=localStorage.getItem('pinmind.dailyTime')||'22:00';if(dailyTimeReached())showDigestState('正在整理今日知识','只会整理上次生成后新保存的链接、文字和截图。');else showDigestState(`今日知识将在 ${time} 生成`,`你可以继续收集内容，PinMind 会在 ${time} 统一整理。`);}
 window.dailyTimeReached=dailyTimeReached;window.showDigestWaiting=showDigestWaiting;window.showDigestState=showDigestState;function renderKnowledgeItems(knowledgeItems,digestDate=window.currentDigestDate){
@@ -56,9 +62,11 @@ applyReadState();
 
 
 const DAILY_TIME_KEY='pinmind.dailyTime';
+let scheduleObservedDate=localDateKey();
 function updateDailySchedule(){
-  const time=localStorage.getItem(DAILY_TIME_KEY)||'22:00';const now=new Date();const today=now.toISOString().slice(0,10);const last=localStorage.getItem('pinmind.lastDigest');const current=now.toTimeString().slice(0,5);
-  if(current<time){if(window.viewingToday!==false&&typeof showDigestWaiting==='function')showDigestWaiting();return;}if(last!==today){window.dispatchEvent(new CustomEvent('pinmind:daily-refresh',{detail:{date:today,time}}));}
+  const time=localStorage.getItem(DAILY_TIME_KEY)||'22:00',now=new Date(),date=localDateKey(now);
+  if(date!==scheduleObservedDate){scheduleObservedDate=date;window.loadHistory?.();window.loadLiveDigest?.();}
+  if(!dailyTimeReached(now)){if(window.viewingToday!==false&&typeof showDigestWaiting==='function')showDigestWaiting();return;}if(shouldRunDailyDigest(now)){window.dispatchEvent(new CustomEvent('pinmind:daily-refresh',{detail:{date:localDateKey(now),time}}));}
 }
 updateDailySchedule();setInterval(updateDailySchedule,60000);
 

@@ -7,7 +7,7 @@ android {
         applicationId = "com.pinmind.beta"
         minSdk = 24
         targetSdk = 35
-        versionCode = 42
-        versionName = "0.6.9"
+        versionCode = 43
+        versionName = "0.7.0"
     }
 }
