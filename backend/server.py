@@ -1,6 +1,7 @@
-import base64, ipaddress, json, os, re, socket, uuid
+import base64, ipaddress, json, mimetypes, os, re, socket, uuid
 from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
+from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.error import HTTPError
 from urllib.parse import urlparse
@@ -8,6 +9,7 @@ from urllib.request import Request, urlopen
 from database import connect as db
 
 MODEL=os.getenv('OPENROUTER_MODEL','openai/gpt-4.1-mini')
+WEB_ROOT=Path(os.getenv('PINMIND_WEB_ROOT',Path(__file__).resolve().parent.parent)).resolve()
 PORT=int(os.getenv('PORT','8787'));HOST=os.getenv('HOST','127.0.0.1')
 UTC_OFFSET_HOURS=int(os.getenv('PINMIND_UTC_OFFSET','8'))
 def now_local():return datetime.now(timezone(timedelta(hours=UTC_OFFSET_HOURS)))
@@ -176,6 +178,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin',os.getenv('PINMIND_CORS_ORIGIN','*'))
         self.send_header('Access-Control-Allow-Headers','Content-Type, Authorization, X-PinMind-Client');self.send_header('Access-Control-Allow-Methods','GET,POST,DELETE,OPTIONS');self.end_headers()
     def send_json(self,data,status=200):self.send_headers(status);self.wfile.write(json.dumps(data,ensure_ascii=False).encode())
+    def send_static(self):
+        route=self.path.split('?',1)[0];relative='index.html' if route in ('/','/demo') else route.lstrip('/');target=(WEB_ROOT/relative).resolve()
+        if WEB_ROOT not in target.parents or not target.is_file():return False
+        content=target.read_bytes();self.send_response(200);self.send_header('Content-Type',mimetypes.guess_type(target.name)[0] or 'application/octet-stream');self.send_header('Content-Length',str(len(content)));self.send_header('Cache-Control','no-cache');self.end_headers();self.wfile.write(content);return True
     def body(self):
         length=int(self.headers.get('Content-Length','0'))
         if length>9_000_000:raise ValueError('request_too_large')
@@ -185,6 +191,7 @@ class Handler(BaseHTTPRequestHandler):
         return value[:96] if value else 'anonymous'
     def do_OPTIONS(self):self.send_headers(204)
     def do_GET(self):
+        if self.path.split('?',1)[0] in ('/','/demo','/index.html','/styles.css','/pages.css','/api-client.js','/knowledge-state.js','/app.js','/pages.js','/demo-data.js') and self.send_static():return
         if self.path=='/health':return self.send_json({'ok':True,'ai_configured':bool(os.getenv('OPENROUTER_API_KEY')),'provider':'openrouter','model':MODEL})
         if not authorized(self):return self.send_json({'error':'unauthorized'},401)
         if self.path.startswith('/api/sources'):
