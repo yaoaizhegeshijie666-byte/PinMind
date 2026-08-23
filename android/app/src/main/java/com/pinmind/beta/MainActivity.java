@@ -1,6 +1,8 @@
 package com.pinmind.beta;
 
 import android.app.Activity;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.Manifest;
 import android.content.Intent;
 import android.content.ClipData;
@@ -90,9 +92,20 @@ public class MainActivity extends Activity {
         }
     }
     private void requestNotificationAccess(){
+        DailyNotification.ensureChannel(this);
         if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},2200);return;}
-        if(Build.VERSION.SDK_INT>=31&&!DailyNotification.canScheduleExactly(this)){try{startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:"+getPackageName())));}catch(Exception ignored){startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+getPackageName())));}}
+        NotificationManager notifications=(NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+        if(notifications!=null&&!notifications.areNotificationsEnabled()){openNotificationSettings(null);return;}
+        if(Build.VERSION.SDK_INT>=26&&notifications!=null){NotificationChannel channel=notifications.getNotificationChannel(DailyNotification.CHANNEL_ID);if(channel!=null&&channel.getImportance()==NotificationManager.IMPORTANCE_NONE){openNotificationSettings(DailyNotification.CHANNEL_ID);return;}}
+        if(Build.VERSION.SDK_INT>=31&&!DailyNotification.canScheduleExactly(this)){try{startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:"+getPackageName())));}catch(Exception ignored){startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+getPackageName())));}return;}
+        DailyNotification.show(this,"PinMind 通知测试成功","系统通知和精确定时权限均已开启。",false);
+        refreshNotificationStatus();
     }
+    private void refreshNotificationStatus(){if(pageReady&&webView!=null)webView.evaluateJavascript("if(typeof refreshNotificationStatus==='function')refreshNotificationStatus()",null);}
+    private void openNotificationSettings(String channel){
+        Intent intent;if(Build.VERSION.SDK_INT>=26&&channel!=null){intent=new Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS);intent.putExtra(Settings.EXTRA_APP_PACKAGE,getPackageName());intent.putExtra(Settings.EXTRA_CHANNEL_ID,channel);}else{intent=new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);intent.putExtra(Settings.EXTRA_APP_PACKAGE,getPackageName());}try{startActivity(intent);}catch(Exception ignored){startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+getPackageName())));}
+    }
+    @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] results){super.onRequestPermissionsResult(requestCode,permissions,results);if(requestCode==2200){if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED)requestNotificationAccess();else refreshNotificationStatus();}}
     private void syncCaptures(){webView.evaluateJavascript("if(typeof syncNativeCaptures==='function')syncNativeCaptures()",null);}
     private boolean openExternal(Uri uri){if(uri==null||!("http".equals(uri.getScheme())||"https".equals(uri.getScheme())))return false;try{startActivity(new Intent(Intent.ACTION_VIEW,uri));return true;}catch(Exception ignored){return false;}}
     private void configureSystemBars(){
@@ -103,7 +116,7 @@ public class MainActivity extends Activity {
         if(Build.VERSION.SDK_INT>=29){window.setStatusBarContrastEnforced(false);window.setNavigationBarContrastEnforced(false);}
         if(Build.VERSION.SDK_INT>=30)window.setDecorFitsSystemWindows(true);
     }
-    @Override protected void onResume(){super.onResume();if(getSharedPreferences("pinmind_config",MODE_PRIVATE).getBoolean("notifications_enabled",true))DailyNotification.schedule(this,getSharedPreferences("pinmind_config",MODE_PRIVATE).getString("daily_time","22:00"));if(pageReady){syncCaptures();webView.evaluateJavascript("if(typeof checkClipboardLink==='function')checkClipboardLink()",null);}}
+    @Override protected void onResume(){super.onResume();if(getSharedPreferences("pinmind_config",MODE_PRIVATE).getBoolean("notifications_enabled",true))DailyNotification.schedule(this,getSharedPreferences("pinmind_config",MODE_PRIVATE).getString("daily_time","22:00"));if(pageReady){syncCaptures();webView.evaluateJavascript("if(typeof checkClipboardLink==='function')checkClipboardLink();if(typeof refreshNotificationStatus==='function')refreshNotificationStatus()",null);}}
     @Override public void onBackPressed(){if(webView.canGoBack())webView.goBack();else super.onBackPressed();}
     public class NativeBridge {
         @JavascriptInterface public String getCaptures(){
