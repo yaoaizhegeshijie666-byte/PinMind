@@ -22,6 +22,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -41,6 +42,8 @@ public class MainActivity extends Activity {
     private WebView webView;
     private TextView statusView;
     private boolean pageReady;
+    private static final int FILE_CHOOSER_REQUEST=2301;
+    private ValueCallback<Uri[]> fileChooserCallback;
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         configureSystemBars();
@@ -78,6 +81,21 @@ public class MainActivity extends Activity {
             }
         });
         webView.setWebChromeClient(new WebChromeClient(){
+            @Override public boolean onShowFileChooser(WebView view,ValueCallback<Uri[]> callback,FileChooserParams params){
+                if(fileChooserCallback!=null)fileChooserCallback.onReceiveValue(null);
+                fileChooserCallback=callback;
+                Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("image/*");
+                try{
+                    startActivityForResult(Intent.createChooser(intent,"选择一张截图"),FILE_CHOOSER_REQUEST);
+                    return true;
+                }catch(Exception error){
+                    fileChooserCallback=null;
+                    callback.onReceiveValue(null);
+                    return false;
+                }
+            }
         });
         webView.addJavascriptInterface(new NativeBridge(),"PinMindNative");
         setContentView(root);
@@ -90,6 +108,13 @@ public class MainActivity extends Activity {
         }catch(Exception error){
             statusView.setVisibility(TextView.VISIBLE);statusView.setText("PinMind 加载失败 · "+error.getClass().getSimpleName()+": "+error.getMessage());
         }
+    }
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode!=FILE_CHOOSER_REQUEST||fileChooserCallback==null)return;
+        Uri[] result=WebChromeClient.FileChooserParams.parseResult(resultCode,data);
+        fileChooserCallback.onReceiveValue(result);
+        fileChooserCallback=null;
     }
     private void requestNotificationAccess(){
         DailyNotification.ensureChannel(this);

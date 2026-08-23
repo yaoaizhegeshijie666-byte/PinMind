@@ -5,7 +5,7 @@ Requires Python 3.10+ and no third-party packages.
 PowerShell:
 
 ```powershell
-$env:OPENAI_API_KEY = 'set-this-locally'
+$env:OPENROUTER_API_KEY = 'set-this-locally'
 python server.py
 ```
 

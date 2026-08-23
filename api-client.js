@@ -53,5 +53,26 @@ function showClipboardPrompt(url){
 }
 async function checkClipboardLink(force=false){if(!force&&!window.PinMindNative?.getClipboardText)return;const url=clipboardUrl(await clipboardText());if(!url){if(force){const button=document.querySelector('#pasteLinkButton');if(button){button.textContent='剪贴板中没有链接';setTimeout(()=>button.textContent='粘贴链接',1200)}}return;}if(!force&&localStorage.getItem('pinmind.lastClipboardLink')===url)return;showClipboardPrompt(url);}
 window.checkClipboardLink=checkClipboardLink;
+const MAX_SCREENSHOT_BYTES=6_000_000;
+function screenshotBase64(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||'').split(',')[1]||'');reader.onerror=()=>reject(new Error('image_read_failed'));reader.readAsDataURL(file);});}
+function screenshotButtonState(text,disabled=false){const button=document.querySelector('#uploadScreenshotButton');if(!button)return;button.textContent=text;button.disabled=disabled;}
+function resetScreenshotButton(delay=0){setTimeout(()=>screenshotButtonState('上传截图'),delay);}
+async function uploadScreenshot(file){
+  if(!file)return;
+  if(!/^image\/(jpeg|png|webp)$/i.test(file.type)){screenshotButtonState('仅支持 JPG/PNG/WebP');resetScreenshotButton(1800);return;}
+  if(file.size>MAX_SCREENSHOT_BYTES){screenshotButtonState('图片需小于 6 MB');resetScreenshotButton(1800);return;}
+  screenshotButtonState('正在上传…',true);
+  try{
+    const imageData=await screenshotBase64(file),title=(file.name||'截图来源').replace(/\.[^.]+$/,'')||'截图来源';
+    if(!imageData)throw new Error('image_read_failed');
+    await PinMindAPI.capture({input_type:'screenshot',title,content:'',image_data:imageData,content_mime:file.type});
+    window.dispatchEvent(new CustomEvent('pinmind:sources-updated'));
+    screenshotButtonState('正在识别…',true);
+    try{await PinMindAPI.generate();await loadLiveDigest();screenshotButtonState('✓ 已生成',true);}
+    catch(error){console.warn('PinMind screenshot saved; generation deferred',error.message);screenshotButtonState('✓ 已上传',true);}
+    resetScreenshotButton(1400);
+  }catch(error){console.warn('PinMind screenshot upload failed',error.message);screenshotButtonState('上传失败，请重试');resetScreenshotButton(1800);}
+}
+window.uploadScreenshot=uploadScreenshot;
 window.addEventListener('pinmind:daily-refresh',refreshDailyDigest);
-window.addEventListener('DOMContentLoaded',async()=>{await syncNativeCaptures();if(window.PinMindDemo?.enabled)await loadLiveDigest();else if(window.PinMindSchedule?.shouldRunDailyDigest())await refreshDailyDigest();else await loadLiveDigest();setTimeout(()=>checkClipboardLink(),900);document.querySelector('#pasteLinkButton')?.addEventListener('click',()=>checkClipboardLink(true));});
+window.addEventListener('DOMContentLoaded',async()=>{await syncNativeCaptures();if(window.PinMindDemo?.enabled)await loadLiveDigest();else if(window.PinMindSchedule?.shouldRunDailyDigest())await refreshDailyDigest();else await loadLiveDigest();setTimeout(()=>checkClipboardLink(),900);document.querySelector('#pasteLinkButton')?.addEventListener('click',()=>checkClipboardLink(true));const input=document.querySelector('#screenshotInput');document.querySelector('#uploadScreenshotButton')?.addEventListener('click',()=>input?.click());input?.addEventListener('change',async()=>{const file=input.files?.[0];input.value='';await uploadScreenshot(file);});});

@@ -2,3 +2,5 @@ pinmind.db
 .env
 __pycache__/
 
+evals/latest_outputs.json
+evals/latest_report.json

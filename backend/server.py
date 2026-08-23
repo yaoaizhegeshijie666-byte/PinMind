@@ -78,8 +78,9 @@ SCHEMA={'type':'object','additionalProperties':False,'required':['knowledge_item
     'tags':{'type':'array','items':{'type':'string'}},
     'content_completeness':{'type':'string','enum':['complete','partial']}}}}}}
 
-OUTLINE_SECTION={'type':'object','additionalProperties':False,'required':['level','title','central_idea'],'properties':{
-    'level':{'type':'integer','minimum':1,'maximum':3},'title':{'type':'string'},'central_idea':{'type':'string'}}}
+OUTLINE_SECTION={'type':'object','additionalProperties':False,'required':['level','title','central_idea','key_points'],'properties':{
+    'level':{'type':'integer','minimum':1,'maximum':3},'title':{'type':'string'},'central_idea':{'type':'string'},
+    'key_points':{'type':'array','maxItems':20,'items':{'type':'string'}}}}
 OUTLINE_SCHEMA={'type':'object','additionalProperties':False,'required':['documents'],'properties':{'documents':{
     'type':'array','maxItems':20,'items':{'type':'object','additionalProperties':False,
     'required':['source_id','document_title','overview','outline','content_completeness'],'properties':{
@@ -100,6 +101,19 @@ def openrouter_json(key,schema,name,content):
     if not output:raise RuntimeError('OPENROUTER_EMPTY_OUTPUT')
     return json.loads(output)
 
+REPAIR_INSTRUCTIONS="""你是学习笔记的终审编辑。对照文章骨架逐项审校候选笔记，并直接输出修复后的完整结果。
+- 检查每个 central_idea 与 key_points 是否得到明确表达；补回遗漏，但不得增加骨架外事实。
+- 删除“本文、本篇、文章介绍、内容探讨”等元话语，以及没有独立信息的单词式条目。
+- 检查标题是否被正文直接回答；问句标题必须给出各选项、判断条件及结论，禁止接入无关预测。
+- 保留数字、比例、阈值、主体差异、因果机制、流程和限定条件；区分事实、观点与预测。
+- 保持 SOURCE_ID 覆盖、章节层级和关联知识约束；相同信息只保留一次。
+输出中文并严格遵守 JSON Schema。"""
+
+def repair_digest(key,outlines,result):
+    if os.getenv('PINMIND_REPAIR_PASS','0').lower() not in ('1','true','on','yes'):return result
+    content=[{'type':'text','text':REPAIR_INSTRUCTIONS+'\n\n文章骨架：\n'+json.dumps(outlines,ensure_ascii=False)+'\n\n候选笔记：\n'+json.dumps(result,ensure_ascii=False)}]
+    return openrouter_json(key,SCHEMA,'pinmind_digest_repaired',content)
+
 def ai_generate(sources,library):
     key=os.getenv('OPENROUTER_API_KEY')
     if not key:raise RuntimeError('OPENROUTER_API_KEY_NOT_CONFIGURED')
@@ -108,11 +122,15 @@ def ai_generate(sources,library):
         body=(source.get('content') or '').strip()
         blocks.append(f"SOURCE_ID: {source['id']}\nTYPE: {source['input_type']}\nTITLE: {source.get('title') or ''}\nCOMPLETENESS: {source.get('completeness') or 'complete'}\nTEXT:\n{body[:per_source]}")
     source_text='\n\n'.join(blocks)
-    outline_prompt="""你是学习笔记的结构编辑。先识别每份来源的真实知识骨架，不写摘要，不跨来源合并。
-对每个 SOURCE_ID：保留有信息意义的原文主标题和副标题；原文没有标题时，根据论证关系谨慎还原层级。
-overview 用一句话列出理解全文所需的主要维度，例如“从用户、商家、平台和基础设施四个层面理解”。
-outline 按阅读顺序输出，level=1/2/3 对应 Markdown 的二至四级标题。每个 central_idea 必须说明本节中心思想，避免“需要重视、非常重要”等空话。
-不能确认完整结构时标记 partial，不得补充原文没有的章节。输出中文并严格遵守 JSON Schema。\n\n来源：\n"""
+    outline_prompt="""你是学习笔记的证据编辑。先提取每份来源的事实与论证骨架，不写文章摘要，不跨来源合并。
+对每个 SOURCE_ID：
+- 忽略作者自我介绍、创作背景、系列编号、免责声明和“本文/本篇将介绍”等元话语，除非它们本身是研究结论。
+- overview 直接给出核心结论或知识范围，不用“本文介绍、文章探讨、内容从”等模板句。
+- outline 按阅读顺序还原层级；central_idea 必须直接回答标题，并尽量写清“结论—原因/机制—结果”。
+- key_points 完整列出定义、主体、数字、比例、阈值、机制、步骤、案例、条件、反例和争议，不因追求简短而漏掉关键事实。
+- 每个 key_point 都要有明确主语和具体判断或动作；禁止“思考、决策、能力扩展、提升效率”这类孤立词或空泛标签。
+- 区分来源中的事实、作者/嘉宾观点与未来预测；不得补充来源外的知识。
+信息密度高时允许更多 outline 和 key_points；不能确认完整结构时标记 partial。输出中文并严格遵守 JSON Schema。\n\n来源：\n"""
     outline_content=[{'type':'text','text':outline_prompt+source_text}]
     for source in sources:
         image=source.get('image_data')
@@ -124,19 +142,19 @@ outline 按阅读顺序输出，level=1/2/3 对应 Markdown 的二至四级标�
     for source in sources:
         if source['id'] in outlined:continue
         body=(source.get('content') or '').strip()
-        outlines.setdefault('documents',[]).append({'source_id':source['id'],'document_title':source.get('title') or '结构化知识笔记','overview':'该来源内容不完整，仅整理当前可以确认的信息。','outline':[{'level':1,'title':'可确认的核心内容','central_idea':body[:300] or '图片内容需要结合原始来源复核。'}],'content_completeness':'partial'})
-    instructions="""你是制作“学霸复习笔记”的知识编辑。根据已经识别的文章骨架提炼知识，不是概括文章讲了什么。
+        outlines.setdefault('documents',[]).append({'source_id':source['id'],'document_title':source.get('title') or '结构化知识笔记','overview':'该来源内容不完整，仅整理当前可以确认的信息。','outline':[{'level':1,'title':'可确认的核心内容','central_idea':body[:300] or '图片内容需要结合原始来源复核。','key_points':[]}],'content_completeness':'partial'})
+    instructions="""你是制作“学霸复习笔记”的知识编辑。根据证据骨架整理可复习的知识，而不是概括文章讲了什么。
 
-成功标准：
-- 用户先扫标题层级就能恢复全文结构，再展开标题复习重点。
-- 每份有有效信息的 SOURCE_ID 至少出现在一张卡片中；低密度来源只生成一张，信息密度高且包含多个独立主题时才拆成多张。数量不得固定为三条、五条或其他目标值。
-- 每张卡第一节必须是 kind=overview、level=0，title=“知识骨架”，content 给出统领全文的维度，items 按顺序列出一级主题。
-- 后续 sections 严格沿用给定 OUTLINE 的顺序与层级。level=1/2/3 对应主标题、副标题和更深标题；标题优先复用原文。
-- 每节 content 用一两句话写清中心思想；items 只保留帮助复习的观点、事实、数字、机制、步骤、案例、条件或反例。
-- 不把局部细节提升为全文结论，不把具体内容压缩成“很重要、要重视、保证质量”等空泛表达。
-- 每个事实必须来自原始来源；内容不完整时标记 partial；不得编造缺失部分。
-- headline 是整张笔记的主题，不使用夸张的单一结论替代文章框架。
-- graph_label 是知识图谱节点名：提炼 2—8 个汉字的领域或核心概念关键词（如“直播电商”“AI产品评测”），不得复制长标题，不写完整句子。
+成功标准（按优先级执行）：
+- 忠实、完整优先于简短：先覆盖 OUTLINE 中的 central_idea 和 key_points，再压缩重复表达。不得遗漏定义、数字、比例、阈值、机制、流程、主体差异、案例和适用条件。
+- 每份有效 SOURCE_ID 至少出现在一张卡片中；低密度来源只生成一张，信息密度高且含多个独立主题时才拆分，数量不预设。
+- 第一节必须是 kind=overview、level=0，title 使用“核心结论”或“知识骨架”；content 直接写结论、定义或知识范围，禁止“本文、本篇、文章将、内容从、作者介绍”等元话语。
+- 后续 sections 严格沿用 OUTLINE 顺序与层级。content 直接回答标题，并尽量呈现“结论—原因/机制—结果”；items 覆盖本节 key_points。
+- 每个 item 必须是能独立理解的完整知识句，有明确主语和具体判断、动作或条件。禁止“思考、决策、信息来源、能力扩展、目标设定、提升效率”等孤立词或低信息量标签。
+- 标题和正文必须相互回答：例如标题问“高日活是资产还是负债”，正文要分别说明资产性、负债性及判断条件，不能接入无关行业预测。
+- 明确区分事实、作者/嘉宾观点和未来预测；不把预测写成事实，不把局部细节提升为全文结论。
+- 每个事实必须来自原始来源；内容不完整时标记 partial；不得编造或用来源外知识补齐。
+- headline 是整张笔记的主题；graph_label 提炼 2—8 个汉字的领域或核心概念关键词，不复制长标题，不写完整句子。
 - 相同信息只保留一次。关联只能引用给定知识 ID。输出中文并严格遵守 JSON Schema。"""
     related='\n'.join(f"{x['id']}: {x['headline']}" for x in library) or '无'
     content=[{'type':'text','text':instructions+'\n\n文章骨架：\n'+json.dumps(outlines,ensure_ascii=False)+'\n\n原始来源：\n'+source_text+'\n\n可关联知识：\n'+related}]
@@ -146,21 +164,39 @@ outline 按阅读顺序输出，level=1/2/3 对应 Markdown 的二至四级标�
             mime=source.get('content_mime') or 'image/jpeg'
             content.extend([{'type':'text','text':f"以下图片属于 SOURCE_ID: {source['id']}"},{'type':'image_url','image_url':{'url':f'data:{mime};base64,{image}'}}])
     result=openrouter_json(key,SCHEMA,'pinmind_digest',content)
+    result=repair_digest(key,outlines,result)
     covered={source_id for item in result.get('knowledge_items',[]) for source_id in item.get('source_ids',[])}
     for document in outlines.get('documents',[]):
         source_id=document.get('source_id')
         if not source_id or source_id in covered:continue
         outline=document.get('outline',[])
         sections=[{'kind':'overview','level':0,'title':'知识骨架','content':document.get('overview',''),'items':[x.get('title','') for x in outline if x.get('level')==1 and x.get('title')]}]
-        sections.extend({'kind':'explanation','level':x.get('level',1),'title':x.get('title','知识要点'),'content':x.get('central_idea',''),'items':[]} for x in outline)
+        sections.extend({'kind':'explanation','level':x.get('level',1),'title':x.get('title','知识要点'),'content':x.get('central_idea',''),'items':x.get('key_points',[])} for x in outline)
         result.setdefault('knowledge_items',[]).append({'type':'concept','headline':document.get('document_title') or '结构化知识笔记','graph_label':(document.get('document_title') or '知识笔记')[:8],'sections':sections,'source_ids':[source_id],'related_knowledge_ids':[],'topic_names':['未分类'],'tags':[],'content_completeness':document.get('content_completeness','partial')})
     return result
+
+META_PREFIXES=('本文','本篇','文章将','文章主要','文章是','文章通过','该文章','作者将','内容从','该文通过')
+LOW_VALUE_ITEMS={'思考','决策','信息来源','能力扩展','目标设定','任务执行流程','提升效率','提高效率','背景说明'}
+
+def clean_learning_text(value):
+    text=re.sub(r'\s+',' ',str(value or '')).strip()
+    return '' if text.startswith(META_PREFIXES) else text
+
+def useful_learning_item(value):
+    text=clean_learning_text(value)
+    if not text or text in LOW_VALUE_ITEMS:return ''
+    chinese=len(re.findall(r'[\u4e00-\u9fff]',text))
+    return text if chinese>=5 or len(text)>=12 else ''
 
 def validate_items(result,sources,library):
     source_ids={x['id'] for x in sources};library_ids={x['id'] for x in library};valid=[]
     for item in result.get('knowledge_items',[]):
         refs=[x for x in item.get('source_ids',[]) if x in source_ids]
-        sections=[x for x in item.get('sections',[]) if (x.get('content') or x.get('items'))]
+        sections=[]
+        for section in item.get('sections',[]):
+            section['content']=clean_learning_text(section.get('content'))
+            section['items']=[cleaned for value in section.get('items',[]) if (cleaned:=useful_learning_item(value))]
+            if section['content'] or section['items']:sections.append(section)
         if not item.get('headline') or not refs or not sections:continue
         label=(item.get('graph_label') or (item.get('topic_names') or ['知识']) [0]).strip()
         item['graph_label']=label[:10] or '知识'
