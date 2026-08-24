@@ -25,7 +25,7 @@ window.mapKnowledgeItems=mapKnowledgeItems;async function loadLiveDigest(){
   try{
     const [data,sourceData]=await Promise.all([PinMindAPI.today(),PinMindAPI.sources().catch(()=>({sources:[]}))]);
     if(window.viewingToday===false)return;
-    const now=new Date(),current=window.PinMindDemo?.enabled?true:window.PinMindSchedule?.isCurrentScheduledDigest(data,now);if(!current){if(!window.dailyTimeReached?.(now))window.showDigestWaiting?.();else window.showDigestState?.('今天没有可生成的知识','本次生成时间前没有新增的有效链接、文字或截图。');return;}if(!data.knowledge_items?.length){window.showDigestState?.('今天没有可生成的知识','本次生成时间前没有新增的有效链接、文字或截图。');return;}
+    const now=new Date(),current=window.PinMindSchedule?.isCurrentScheduledDigest(data,now);if(!current){if(!window.dailyTimeReached?.(now))window.showDigestWaiting?.();else window.showDigestState?.('今天没有可生成的知识','本次生成时间前没有新增的有效链接、文字或截图。');return;}if(!data.knowledge_items?.length){window.showDigestState?.('今天没有可生成的知识','本次生成时间前没有新增的有效链接、文字或截图。');return;}
     const liveItems=mapKnowledgeItems(data.knowledge_items,sourceData.sources||[]);
     window.renderKnowledgeItems(liveItems,data.digest_date);
     const intro=document.querySelector('.intro p');if(intro)intro.textContent='从你今天捕捉的内容中，PinMind 整理了 '+liveItems.length+' 条值得留下的知识。';
@@ -75,4 +75,4 @@ async function uploadScreenshot(file){
 }
 window.uploadScreenshot=uploadScreenshot;
 window.addEventListener('pinmind:daily-refresh',refreshDailyDigest);
-window.addEventListener('DOMContentLoaded',async()=>{await syncNativeCaptures();if(window.PinMindDemo?.enabled)await loadLiveDigest();else if(window.PinMindSchedule?.shouldRunDailyDigest())await refreshDailyDigest();else await loadLiveDigest();setTimeout(()=>checkClipboardLink(),900);document.querySelector('#pasteLinkButton')?.addEventListener('click',()=>checkClipboardLink(true));const input=document.querySelector('#screenshotInput');document.querySelector('#uploadScreenshotButton')?.addEventListener('click',()=>input?.click());input?.addEventListener('change',async()=>{const file=input.files?.[0];input.value='';await uploadScreenshot(file);});});
+window.addEventListener('DOMContentLoaded',async()=>{await syncNativeCaptures();if(window.PinMindSchedule?.shouldRunDailyDigest())await refreshDailyDigest();else await loadLiveDigest();setTimeout(()=>checkClipboardLink(),900);document.querySelector('#pasteLinkButton')?.addEventListener('click',()=>checkClipboardLink(true));const input=document.querySelector('#screenshotInput');document.querySelector('#uploadScreenshotButton')?.addEventListener('click',()=>input?.click());input?.addEventListener('change',async()=>{const file=input.files?.[0];input.value='';await uploadScreenshot(file);});});
