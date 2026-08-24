@@ -37,7 +37,8 @@ jobs:
           PINMIND_KEY_PASSWORD: ${{ secrets.PINMIND_KEY_PASSWORD }}
         run: gradle :app:assembleRelease --stacktrace
       - name: Verify APK signature
-        run: "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
       - name: Prepare APK
         run: cp app/build/outputs/apk/release/app-release.apk ../PinMind-MVP.apk
       - uses: actions/upload-artifact@v4
