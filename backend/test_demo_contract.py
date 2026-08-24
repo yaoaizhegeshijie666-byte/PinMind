@@ -18,8 +18,14 @@ class DemoContractTest(unittest.TestCase):
     def test_waiting_state_owns_the_date_label(self):
         app = (ROOT / "app.js").read_text(encoding="utf-8")
         pages = (ROOT / "pages.js").read_text(encoding="utf-8")
-        self.assertIn("等待生成 · ", app)
-        self.assertIn("正在生成 · ", app)
+        self.assertIn("date.textContent=reached?'正在生成':'等待生成'", app)
+        self.assertNotIn("你可以继续收集内容，PinMind 会在", app)
+        self.assertIn("showDigestState(`今日知识将在 ", app)
+        self.assertIn("生成`,'')", app)
+        self.assertIn("document.querySelector('.intro').hidden=true", pages)
+        self.assertIn("document.querySelector('.intro').hidden=false", pages)
+        self.assertIn("const uncollected=event.target.closest('.uncollected-card')", pages)
+        self.assertIn("showKnowledgeDetail(uncollected._item)", pages)
         today_nav = pages.split("if(item.dataset.page==='today')", 1)[1]
         self.assertLess(today_nav.index("window.showDigestWaiting?.()"), today_nav.index("window.loadLiveDigest?.()"))
         self.assertEqual(app, (ROOT / "backend/web/app.js").read_text(encoding="utf-8"))
