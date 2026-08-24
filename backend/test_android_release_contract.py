@@ -50,8 +50,20 @@ class AndroidReleaseContractTest(unittest.TestCase):
         self.assertNotIn("if(!enabled){DailyNotification.cancel", receiver)
     def test_android_release_version(self):
         gradle = (ROOT / "android/app/build.gradle.kts").read_text(encoding="utf-8")
-        self.assertIn("versionCode = 47", gradle)
-        self.assertIn('versionName = "0.7.4"', gradle)
+        self.assertIn("versionCode = 48", gradle)
+        self.assertIn('versionName = "0.7.5"', gradle)
 
+    def test_apk_keeps_capture_actions_after_read_and_has_history_fallback(self):
+        app = (ASSETS / "app.js").read_text(encoding="utf-8")
+        pages = (ASSETS / "pages.js").read_text(encoding="utf-8")
+        index = (ASSETS / "index.html").read_text(encoding="utf-8")
+        seed = (ASSETS / "apk-history-seed.js").read_text(encoding="utf-8")
+        self.assertIn("hidden = window.viewingToday===false", app)
+        self.assertIn("document.querySelector('.intro').hidden=false", app)
+        self.assertIn("window.PinMindApkHistory?.()", pages)
+        self.assertIn("PinMindAPI.history().catch", pages)
+        self.assertIn('src="apk-history-seed.js"', index)
+        self.assertIn("demo_new_k1", seed)
+        self.assertIn("demo_new_k5", seed)
 if __name__ == "__main__":
     unittest.main()

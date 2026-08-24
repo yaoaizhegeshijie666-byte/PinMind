@@ -47,14 +47,14 @@ document.querySelector('#readButton').addEventListener('click', () => {
   const readButton = document.querySelector('#readButton');
   readButton.classList.add('is-read');
   readButton.disabled = true;
-  list.classList.add('fade'); document.querySelector('.intro').classList.add('fade');
+  list.classList.add('fade');
   PinMindState.markRead(window.currentDigestDate,window.currentKnowledgeItems);
-  setTimeout(() => { list.hidden = true; document.querySelector('.intro').hidden = true; document.querySelector('#emptyState').hidden = false; }, 180);
+  setTimeout(() => { list.hidden = true; document.querySelector('.intro').hidden = window.viewingToday===false; document.querySelector('#emptyState').hidden = false; }, 180);
 });
 
 function applyReadState(){
   const read=PinMindState.isRead(window.currentDigestDate,window.currentKnowledgeItems),button=document.querySelector('#readButton');button.classList.toggle('is-read',read);button.disabled=read;
-  if(read&&window.viewingToday!==false){list.hidden=true;document.querySelector('.intro').hidden=true;document.querySelector('#emptyState').hidden=false;}
+  if(read&&window.viewingToday!==false){list.hidden=true;document.querySelector('.intro').hidden=false;document.querySelector('.intro').classList.remove('fade');document.querySelector('#emptyState').hidden=false;}
   else{list.hidden=false;document.querySelector('.intro').hidden=window.viewingToday===false;document.querySelector('#emptyState').hidden=true;list.classList.remove('fade');document.querySelector('.intro').classList.remove('fade');}
 }
 window.applyReadState=applyReadState;
