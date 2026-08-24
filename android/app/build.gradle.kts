@@ -9,8 +9,8 @@ android {
         applicationId = "com.pinmind.beta"
         minSdk = 24
         targetSdk = 35
-        versionCode = 50
-        versionName = "0.7.7"
+        versionCode = 51
+        versionName = "0.7.8"
     }
     signingConfigs {
         create("release") {

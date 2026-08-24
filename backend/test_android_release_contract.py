@@ -37,6 +37,7 @@ class AndroidReleaseContractTest(unittest.TestCase):
         self.assertIn("if(!items.length)return", pages)
         self.assertNotIn("if(!items.length||PinMindState.isRead", pages)
         self.assertIn("read&&window.viewingToday!==false", app)
+        self.assertIn("if(introSection)introSection.hidden=false", app)
 
     def test_apk_capture_waits_for_schedule_and_keeps_client_identity(self):
         api = (ASSETS / "api-client.js").read_text(encoding="utf-8")
@@ -50,8 +51,8 @@ class AndroidReleaseContractTest(unittest.TestCase):
         self.assertNotIn("if(!enabled){DailyNotification.cancel", receiver)
     def test_android_release_version(self):
         gradle = (ROOT / "android/app/build.gradle.kts").read_text(encoding="utf-8")
-        self.assertIn("versionCode = 50", gradle)
-        self.assertIn('versionName = "0.7.7"', gradle)
+        self.assertIn("versionCode = 51", gradle)
+        self.assertIn('versionName = "0.7.8"', gradle)
 
     def test_apk_keeps_capture_actions_after_read_and_has_history_fallback(self):
         app = (ASSETS / "app.js").read_text(encoding="utf-8")
