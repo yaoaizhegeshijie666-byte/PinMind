@@ -50,8 +50,8 @@ class AndroidReleaseContractTest(unittest.TestCase):
         self.assertNotIn("if(!enabled){DailyNotification.cancel", receiver)
     def test_android_release_version(self):
         gradle = (ROOT / "android/app/build.gradle.kts").read_text(encoding="utf-8")
-        self.assertIn("versionCode = 48", gradle)
-        self.assertIn('versionName = "0.7.5"', gradle)
+        self.assertIn("versionCode = 49", gradle)
+        self.assertIn('versionName = "0.7.6"', gradle)
 
     def test_apk_keeps_capture_actions_after_read_and_has_history_fallback(self):
         app = (ASSETS / "app.js").read_text(encoding="utf-8")
@@ -65,5 +65,14 @@ class AndroidReleaseContractTest(unittest.TestCase):
         self.assertIn('src="apk-history-seed.js"', index)
         self.assertIn("demo_new_k1", seed)
         self.assertIn("demo_new_k5", seed)
+    def test_android_release_uses_stable_signing(self):
+        gradle = (ROOT / "android/app/build.gradle.kts").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github/workflows/android-release.yml").read_text(encoding="utf-8")
+        self.assertIn('create("release")', gradle)
+        self.assertIn('PINMIND_KEYSTORE_PATH', gradle)
+        self.assertIn(':app:assembleRelease', workflow)
+        self.assertIn('secrets.PINMIND_KEYSTORE_BASE64', workflow)
+        self.assertIn('jarsigner -verify', workflow)
+        self.assertNotIn(':app:assembleDebug', workflow)
 if __name__ == "__main__":
     unittest.main()

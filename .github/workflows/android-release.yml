@@ -25,10 +25,21 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.10.2"
-      - name: Build installable debug APK
-        run: gradle :app:assembleDebug --stacktrace
+      - name: Restore stable signing key
+        env:
+          PINMIND_KEYSTORE_BASE64: ${{ secrets.PINMIND_KEYSTORE_BASE64 }}
+        run: echo "$PINMIND_KEYSTORE_BASE64" | base64 --decode > pinmind-mvp.jks
+      - name: Build signed release APK
+        env:
+          PINMIND_KEYSTORE_PATH: pinmind-mvp.jks
+          PINMIND_KEYSTORE_PASSWORD: ${{ secrets.PINMIND_KEYSTORE_PASSWORD }}
+          PINMIND_KEY_ALIAS: ${{ secrets.PINMIND_KEY_ALIAS }}
+          PINMIND_KEY_PASSWORD: ${{ secrets.PINMIND_KEY_PASSWORD }}
+        run: gradle :app:assembleRelease --stacktrace
+      - name: Verify APK signature
+        run: jarsigner -verify -verbose -certs app/build/outputs/apk/release/app-release.apk
       - name: Prepare APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk ../PinMind-MVP.apk
+        run: cp app/build/outputs/apk/release/app-release.apk ../PinMind-MVP.apk
       - uses: actions/upload-artifact@v4
         with:
           name: PinMind-MVP
