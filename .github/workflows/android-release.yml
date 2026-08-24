@@ -31,7 +31,7 @@ jobs:
         run: echo "$PINMIND_KEYSTORE_BASE64" | base64 --decode > pinmind-mvp.jks
       - name: Build signed release APK
         env:
-          PINMIND_KEYSTORE_PATH: pinmind-mvp.jks
+          PINMIND_KEYSTORE_PATH: ../pinmind-mvp.jks
           PINMIND_KEYSTORE_PASSWORD: ${{ secrets.PINMIND_KEYSTORE_PASSWORD }}
           PINMIND_KEY_ALIAS: ${{ secrets.PINMIND_KEY_ALIAS }}
           PINMIND_KEY_PASSWORD: ${{ secrets.PINMIND_KEY_PASSWORD }}
