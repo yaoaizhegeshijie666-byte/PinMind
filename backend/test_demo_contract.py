@@ -15,6 +15,16 @@ class DemoContractTest(unittest.TestCase):
         self.assertIn("window.PinMindDemo?.enabled?window.dailyTimeReached?.(now)", self.api)
         self.assertNotIn("window.PinMindDemo?.enabled?true", self.api)
 
+    def test_waiting_state_owns_the_date_label(self):
+        app = (ROOT / "app.js").read_text(encoding="utf-8")
+        pages = (ROOT / "pages.js").read_text(encoding="utf-8")
+        self.assertIn("等待生成 · ", app)
+        self.assertIn("正在生成 · ", app)
+        today_nav = pages.split("if(item.dataset.page==='today')", 1)[1]
+        self.assertLess(today_nav.index("window.showDigestWaiting?.()"), today_nav.index("window.loadLiveDigest?.()"))
+        self.assertEqual(app, (ROOT / "backend/web/app.js").read_text(encoding="utf-8"))
+        self.assertEqual(pages, (ROOT / "backend/web/pages.js").read_text(encoding="utf-8"))
+
     def test_history_has_three_groups_with_two_or_three_items(self):
         line = next(line for line in self.demo.splitlines() if "const historyGroups=" in line)
         payload = line.split("const historyGroups=[[", 1)[1].split("]],uncollectedItems=", 1)[0]
