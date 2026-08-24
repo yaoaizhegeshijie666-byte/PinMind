@@ -18,17 +18,22 @@ class DemoContractTest(unittest.TestCase):
     def test_waiting_state_owns_the_date_label(self):
         app = (ROOT / "app.js").read_text(encoding="utf-8")
         pages = (ROOT / "pages.js").read_text(encoding="utf-8")
+        styles = (ROOT / "styles.css").read_text(encoding="utf-8")
         self.assertIn("date.textContent=reached?'正在生成':'等待生成'", app)
         self.assertIn("你可以继续收集内容，PinMind 会在", app)
         self.assertIn("showDigestState(`今日知识将在 ", app)
+        self.assertIn("生成`,'')", app)
         self.assertIn("document.querySelector('.intro').hidden=true", pages)
         self.assertIn("document.querySelector('.intro').hidden=false", pages)
+        self.assertIn("document.querySelector('.intro').hidden=window.viewingToday===false", app)
+        self.assertIn(".intro[hidden]{display:none!important}", styles)
         self.assertIn("const uncollected=event.target.closest('.uncollected-card')", pages)
         self.assertIn("showKnowledgeDetail(uncollected._item)", pages)
         today_nav = pages.split("if(item.dataset.page==='today')", 1)[1]
         self.assertLess(today_nav.index("window.showDigestWaiting?.()"), today_nav.index("window.loadLiveDigest?.()"))
         self.assertEqual(app, (ROOT / "backend/web/app.js").read_text(encoding="utf-8"))
         self.assertEqual(pages, (ROOT / "backend/web/pages.js").read_text(encoding="utf-8"))
+        self.assertEqual(styles, (ROOT / "backend/web/styles.css").read_text(encoding="utf-8"))
 
     def test_history_has_three_groups_with_two_or_three_items(self):
         line = next(line for line in self.demo.splitlines() if "const historyGroups=" in line)
