@@ -141,7 +141,7 @@ public class MainActivity extends Activity {
         if(Build.VERSION.SDK_INT>=29){window.setStatusBarContrastEnforced(false);window.setNavigationBarContrastEnforced(false);}
         if(Build.VERSION.SDK_INT>=30)window.setDecorFitsSystemWindows(true);
     }
-    @Override protected void onResume(){super.onResume();if(getSharedPreferences("pinmind_config",MODE_PRIVATE).getBoolean("notifications_enabled",true))DailyNotification.schedule(this,getSharedPreferences("pinmind_config",MODE_PRIVATE).getString("daily_time","22:00"));if(pageReady){syncCaptures();webView.evaluateJavascript("if(typeof checkClipboardLink==='function')checkClipboardLink();if(typeof refreshNotificationStatus==='function')refreshNotificationStatus()",null);}}
+    @Override protected void onResume(){super.onResume();DailyNotification.schedule(this,getSharedPreferences("pinmind_config",MODE_PRIVATE).getString("daily_time","22:00"));if(pageReady){syncCaptures();webView.evaluateJavascript("if(typeof checkClipboardLink==='function')checkClipboardLink();if(typeof refreshNotificationStatus==='function')refreshNotificationStatus()",null);}}
     @Override public void onBackPressed(){if(webView.canGoBack())webView.goBack();else super.onBackPressed();}
     public class NativeBridge {
         @JavascriptInterface public String getCaptures(){
@@ -152,9 +152,10 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void clearCaptures(){deleteCaptureFiles();getSharedPreferences("pinmind_sources",MODE_PRIVATE).edit().remove("captures").apply();}
         @JavascriptInterface public String getClipboardText(){try{ClipboardManager clipboard=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);if(clipboard==null||!clipboard.hasPrimaryClip())return "";ClipData clip=clipboard.getPrimaryClip();if(clip==null||clip.getItemCount()==0)return "";CharSequence text=clip.getItemAt(0).coerceToText(MainActivity.this);return text==null?"":text.toString();}catch(Exception ignored){return "";}}
         @JavascriptInterface public void setApiBase(String value){getSharedPreferences("pinmind_config",MODE_PRIVATE).edit().putString("api_base",value).apply();}
+        @JavascriptInterface public String getClientId(){return getSharedPreferences("pinmind_config",MODE_PRIVATE).getString("client_id","");}
         @JavascriptInterface public void setClientId(String value){getSharedPreferences("pinmind_config",MODE_PRIVATE).edit().putString("client_id",value).apply();}
         @JavascriptInterface public void setDailyTime(String value){runOnUiThread(()->DailyNotification.schedule(MainActivity.this,value));}
-        @JavascriptInterface public void setNotificationsEnabled(boolean enabled){getSharedPreferences("pinmind_config",MODE_PRIVATE).edit().putBoolean("notifications_enabled",enabled).apply();runOnUiThread(()->{if(enabled){requestNotificationAccess();DailyNotification.schedule(MainActivity.this,getSharedPreferences("pinmind_config",MODE_PRIVATE).getString("daily_time","22:00"));}else DailyNotification.cancel(MainActivity.this);});}
+        @JavascriptInterface public void setNotificationsEnabled(boolean enabled){getSharedPreferences("pinmind_config",MODE_PRIVATE).edit().putBoolean("notifications_enabled",enabled).apply();runOnUiThread(()->{if(enabled)requestNotificationAccess();DailyNotification.schedule(MainActivity.this,getSharedPreferences("pinmind_config",MODE_PRIVATE).getString("daily_time","22:00"));});}
         @JavascriptInterface public String getNotificationStatus(){if(!DailyNotification.canNotify(MainActivity.this))return "通知权限未开启";if(!DailyNotification.canScheduleExactly(MainActivity.this))return "需开启精确定时权限";return "通知和定时权限已就绪";}
         @JavascriptInterface public void requestNotificationAccess(){runOnUiThread(()->MainActivity.this.requestNotificationAccess());}
         @JavascriptInterface public void copyText(String value){ClipboardManager clipboard=(ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);if(clipboard!=null)clipboard.setPrimaryClip(ClipData.newPlainText("PinMind Markdown",value==null?"":value));}

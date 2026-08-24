@@ -1,5 +1,5 @@
 const PinMindAPI={
-  get clientId(){let id=localStorage.getItem('pinmind.clientId');if(!id){id='client_'+(crypto.randomUUID?.()||Date.now().toString(36)+Math.random().toString(36).slice(2));localStorage.setItem('pinmind.clientId',id)}window.PinMindNative?.setClientId?.(id);return id},
+  get clientId(){let id=localStorage.getItem('pinmind.clientId')||window.PinMindNative?.getClientId?.();if(!id){id='client_'+(crypto.randomUUID?.()||Date.now().toString(36)+Math.random().toString(36).slice(2))}localStorage.setItem('pinmind.clientId',id);window.PinMindNative?.setClientId?.(id);return id},
   get base(){return (localStorage.getItem('pinmind.apiBase')||'https://pinmind-api.onrender.com').replace(/\/$/,'')},
   async request(path,options={}){if(!this.base)throw new Error('BACKEND_NOT_CONFIGURED');const response=await fetch(this.base+path,{...options,headers:{'Content-Type':'application/json','X-PinMind-Client':this.clientId,...(options.headers||{})}});const data=await response.json();if(!response.ok)throw new Error(data.error||`HTTP_${response.status}`);return data},
   health(){return this.request('/health')},
@@ -40,8 +40,8 @@ let digestRefreshActive=false;
 async function refreshDailyDigest(){
   if(digestRefreshActive)return;if(!window.dailyTimeReached?.()){window.showDigestWaiting?.();return;}digestRefreshActive=true;
   window.showDigestState?.('正在整理今日知识','正在读取上次生成后新增的链接、文字和截图。');
-  try{await PinMindAPI.generate()}catch(error){if(!['no_new_ready_sources','no_supported_knowledge'].includes(error.message))console.warn('PinMind generation deferred',error.message)}
-  await loadLiveDigest();localStorage.setItem('pinmind.lastDigestRun',window.PinMindSchedule?.scheduleRunKey(new Date())||'');digestRefreshActive=false;
+  let completed=false;try{await PinMindAPI.generate();completed=true}catch(error){completed=['no_new_ready_sources','no_supported_knowledge'].includes(error.message);if(!completed)console.warn('PinMind generation deferred',error.message)}
+  await loadLiveDigest();if(completed)localStorage.setItem('pinmind.lastDigestRun',window.PinMindSchedule?.scheduleRunKey(new Date())||'');digestRefreshActive=false;
 }
 window.refreshDailyDigest=refreshDailyDigest;
 const clipboardUrl=text=>String(text||'').match(/https?:\/\/[^\s]+/i)?.[0]?.replace(/[，。；、）】》]+$/,'')||'';
@@ -67,9 +67,7 @@ async function uploadScreenshot(file){
     if(!imageData)throw new Error('image_read_failed');
     await PinMindAPI.capture({input_type:'screenshot',title,content:'',image_data:imageData,content_mime:file.type});
     window.dispatchEvent(new CustomEvent('pinmind:sources-updated'));
-    screenshotButtonState('正在识别…',true);
-    try{await PinMindAPI.generate();await loadLiveDigest();screenshotButtonState('✓ 已生成',true);}
-    catch(error){console.warn('PinMind screenshot saved; generation deferred',error.message);screenshotButtonState('✓ 已上传',true);}
+    screenshotButtonState('✓ 已上传，等待定时生成',true);
     resetScreenshotButton(1400);
   }catch(error){console.warn('PinMind screenshot upload failed',error.message);screenshotButtonState('上传失败，请重试');resetScreenshotButton(1800);}
 }

@@ -11,8 +11,8 @@ function scheduleRunKey(value=new Date()){return localDateKey(value)+'|'+(localS
 function isCurrentScheduledDigest(data,value=new Date()){if(!data||data.digest_date!==localDateKey(value)||!dailyTimeReached(value))return false;const times=(data.knowledge_items||[]).map(item=>Date.parse(item.created_at||'')).filter(Number.isFinite);return times.length>0&&Math.max(...times)>=scheduledAt(value).getTime()}
 function shouldRunDailyDigest(value=new Date()){return dailyTimeReached(value)&&localStorage.getItem('pinmind.lastDigestRun')!==scheduleRunKey(value)}
 window.PinMindSchedule={localDateKey,scheduledAt,scheduleRunKey,isCurrentScheduledDigest,shouldRunDailyDigest};
-function showDigestState(title,message){window.currentKnowledgeItems=[];window.viewingToday=true;list.hidden=false;list.innerHTML=`<section class="empty-state"><span>◷</span><h2>${escapeHtml(title)}</h2><p>${escapeHtml(message)}</p></section>`;const intro=document.querySelector('.intro p');if(intro)intro.textContent=message;const button=document.querySelector('#readButton');if(button)button.hidden=true;}
-function showDigestWaiting(){const time=localStorage.getItem('pinmind.dailyTime')||'22:00',reached=dailyTimeReached(),date=document.querySelector('.date');if(date)date.textContent=reached?`正在生成 · ${time}`:`等待生成 · ${time}`;if(reached)showDigestState('正在整理今日知识','只会整理上次生成后新保存的链接、文字和截图。');else showDigestState(`今日知识将在 ${time} 生成`,`你可以继续收集内容，PinMind 会在 ${time} 统一整理。`);}
+function showDigestState(title,message){window.currentKnowledgeItems=[];window.viewingToday=true;list.hidden=false;list.innerHTML=`<section class="empty-state"><span>◷</span><h2>${escapeHtml(title)}</h2>${message?`<p>${escapeHtml(message)}</p>`:''}</section>`;const intro=document.querySelector('.intro p');if(intro)intro.textContent=message||'';const button=document.querySelector('#readButton');if(button)button.hidden=true;}
+function showDigestWaiting(){const time=localStorage.getItem('pinmind.dailyTime')||'22:00',reached=dailyTimeReached(),date=document.querySelector('.date');if(date)date.textContent=reached?'正在生成':'等待生成';if(reached)showDigestState('正在整理今日知识','只会整理上次生成后新保存的链接、文字和截图。');else{showDigestState(`今日知识将在 ${time} 生成`,'');const intro=document.querySelector('.intro p');if(intro)intro.textContent=`你可以继续收集内容，PinMind 会在 ${time} 统一整理。`;}}
 window.dailyTimeReached=dailyTimeReached;window.showDigestWaiting=showDigestWaiting;window.showDigestState=showDigestState;function renderKnowledgeItems(knowledgeItems,digestDate=window.currentDigestDate){
   window.currentDigestDate=digestDate;window.currentKnowledgeItems=knowledgeItems;const readButton=document.querySelector('#readButton');if(readButton)readButton.hidden=false;
   list.innerHTML='';
@@ -54,8 +54,8 @@ document.querySelector('#readButton').addEventListener('click', () => {
 
 function applyReadState(){
   const read=PinMindState.isRead(window.currentDigestDate,window.currentKnowledgeItems),button=document.querySelector('#readButton');button.classList.toggle('is-read',read);button.disabled=read;
-  if(read){list.hidden=true;document.querySelector('.intro').hidden=true;document.querySelector('#emptyState').hidden=false;}
-  else{list.hidden=false;document.querySelector('.intro').hidden=false;document.querySelector('#emptyState').hidden=true;list.classList.remove('fade');document.querySelector('.intro').classList.remove('fade');}
+  if(read&&window.viewingToday!==false){list.hidden=true;document.querySelector('.intro').hidden=true;document.querySelector('#emptyState').hidden=false;}
+  else{list.hidden=false;document.querySelector('.intro').hidden=window.viewingToday===false;document.querySelector('#emptyState').hidden=true;list.classList.remove('fade');document.querySelector('.intro').classList.remove('fade');}
 }
 window.applyReadState=applyReadState;
 applyReadState();

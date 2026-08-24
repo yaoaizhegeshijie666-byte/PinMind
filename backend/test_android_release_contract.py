@@ -26,10 +26,32 @@ class AndroidReleaseContractTest(unittest.TestCase):
         for rule in ("核心结论", "删除“本文、本篇", "保留数字、比例、阈值", "区分事实、观点与预测"):
             self.assertIn(rule, server)
 
+    def test_apk_waiting_and_history_behavior(self):
+        app = (ASSETS / "app.js").read_text(encoding="utf-8")
+        pages = (ASSETS / "pages.js").read_text(encoding="utf-8")
+        styles = (ASSETS / "styles.css").read_text(encoding="utf-8")
+        self.assertNotIn(" · ${time}", app)
+        waiting = next(line for line in app.splitlines() if "function showDigestWaiting" in line)
+        self.assertEqual(waiting.count("intro.textContent"), 1)
+        self.assertIn(".intro[hidden]{display:none!important}", styles)
+        self.assertIn("if(!items.length)return", pages)
+        self.assertNotIn("if(!items.length||PinMindState.isRead", pages)
+        self.assertIn("read&&window.viewingToday!==false", app)
+
+    def test_apk_capture_waits_for_schedule_and_keeps_client_identity(self):
+        api = (ASSETS / "api-client.js").read_text(encoding="utf-8")
+        activity = (ROOT / "android/app/src/main/java/com/pinmind/beta/MainActivity.java").read_text(encoding="utf-8")
+        receiver = (ROOT / "android/app/src/main/java/com/pinmind/beta/NotificationReceiver.java").read_text(encoding="utf-8")
+        upload = api.split("async function uploadScreenshot", 1)[1].split("window.uploadScreenshot", 1)[0]
+        self.assertNotIn("PinMindAPI.generate()", upload)
+        self.assertIn("window.PinMindNative?.getClientId?.()", api)
+        self.assertIn("public String getClientId()", activity)
+        self.assertIn("DigestJobService.enqueue(context)", receiver)
+        self.assertNotIn("if(!enabled){DailyNotification.cancel", receiver)
     def test_android_release_version(self):
         gradle = (ROOT / "android/app/build.gradle.kts").read_text(encoding="utf-8")
-        self.assertIn("versionCode = 46", gradle)
-        self.assertIn('versionName = "0.7.3"', gradle)
+        self.assertIn("versionCode = 47", gradle)
+        self.assertIn('versionName = "0.7.4"', gradle)
 
 if __name__ == "__main__":
     unittest.main()
