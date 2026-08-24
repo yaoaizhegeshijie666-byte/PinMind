@@ -26,7 +26,7 @@ class DemoContractTest(unittest.TestCase):
         self.assertIn("document.querySelector('.intro').hidden=true", pages)
         self.assertIn("document.querySelector('.intro').hidden=false", pages)
         self.assertIn("document.querySelector('.intro').hidden=window.viewingToday===false", app)
-        self.assertIn(".intro[hidden]{display:none!important}", styles)
+        self.assertIn(".intro[hidden],.knowledge-list[hidden],.empty-state[hidden]{display:none!important}", styles)
         self.assertIn("const uncollected=event.target.closest('.uncollected-card')", pages)
         self.assertIn("showKnowledgeDetail(uncollected._item)", pages)
         today_nav = pages.split("if(item.dataset.page==='today')", 1)[1]
