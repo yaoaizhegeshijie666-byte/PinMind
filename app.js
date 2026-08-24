@@ -55,7 +55,7 @@ document.querySelector('#readButton').addEventListener('click', () => {
 function applyReadState(){
   const read=PinMindState.isRead(window.currentDigestDate,window.currentKnowledgeItems),button=document.querySelector('#readButton');button.classList.toggle('is-read',read);button.disabled=read;
   if(read){list.hidden=true;document.querySelector('.intro').hidden=true;document.querySelector('#emptyState').hidden=false;}
-  else{list.hidden=false;document.querySelector('.intro').hidden=false;document.querySelector('#emptyState').hidden=true;list.classList.remove('fade');document.querySelector('.intro').classList.remove('fade');}
+  else{list.hidden=false;document.querySelector('.intro').hidden=window.viewingToday===false;document.querySelector('#emptyState').hidden=true;list.classList.remove('fade');document.querySelector('.intro').classList.remove('fade');}
 }
 window.applyReadState=applyReadState;
 applyReadState();
