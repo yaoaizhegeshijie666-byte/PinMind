@@ -43,16 +43,57 @@ const PINMIND_DEMO_KNOWLEDGE=[
     {kind:'boundary',level:1,title:'相关行为不等于留存原因',content:'高留存用户常用某功能，只能说明两者相关；还需要实验或准实验验证该功能是否真正提升留存。',items:[]}
   ]}
 ];
+const PINMIND_DEMO_CURATED_SOURCES=[
+ PINMIND_DEMO_SOURCES[0],PINMIND_DEMO_SOURCES[1],
+ {...PINMIND_DEMO_SOURCES[2],id:'demo_instant_retail',title:'即时零售是什么',url:'https://www.xiaohongshu.com/discovery/item/689d5d22000000001d01cd67'},
+ {...PINMIND_DEMO_SOURCES[3],id:'demo_agent',title:'一图搞懂什么是智能体 Agent',url:'https://www.xiaohongshu.com/discovery/item/6a6f4a0900000000050219dc'},
+ {...PINMIND_DEMO_SOURCES[4],id:'demo_ai_office',title:'大厂押注 AI 办公，飞书和钉钉却先成了配角',url:'https://www.xiaoyuzhoufm.com/episode/6a6da28d1b5e24969ce72d4c'}
+];
+const curatedCard=(id,type,headline,topic,source,sections)=>({id,owner_id:'demo',type,headline,graph_label:topic,topic_names:[topic],tags:[topic],source_ids:[source],content_completeness:'complete',sections});
+const PINMIND_DEMO_CURATED_KNOWLEDGE=[
+ curatedCard('demo_new_k1','framework','直播电商的核心价值，是降低用户决策成本、提高商家转化并补全平台交易闭环','直播电商','demo_live_commerce',[
+  {kind:'overview',level:0,title:'核心结论',content:'直播电商应从出现原因、三端价值、目标用户和平台差异四部分分析，而不是简化成低价卖货。',items:['用户端：从主动搜索转为被动种草','商家端：从流量采买转向高转化与私域沉淀','平台端：从广告变现延伸到交易闭环']},
+  {kind:'mechanism',level:1,title:'用户决策的三重机制',content:'选品、讲解和优惠连续解决买什么、是否适合、现在是否下单三个问题。',items:['选品降低筛选成本','讲解降低理解成本','优惠推动即时决策']},
+  {kind:'fact',level:1,title:'核心目标用户',content:'核心用户处于潜在需求、模糊需求或初步决策阶段，集中在18—45岁，女性占比更高，通常价格敏感、碎片时间多。',items:[]}
+ ]),
+ curatedCard('demo_new_k2','method','AI 产品评测要形成“目标—数据集—评分—归因—回归”的五步闭环','AI产品评测','demo_ai_evaluation',[
+  {kind:'overview',level:0,title:'五步闭环',content:'先明确评什么与不评什么，再用稳定数据集和评分规则定位问题，最后以回归测试验证优化结果。',items:['定义目标与边界','构建评测数据集','设计维度与评分细则','执行评测并分类归因','确定优先级并回归验证']},
+  {kind:'fact',level:1,title:'数据集结构',content:'数据来自真实用户 case、人工构造 case 和公开数据集；建议按核心场景60%、边缘场景30%、红队测试10%组织。',items:['自动评测跑全量，人工评测抽核心','Bad Case 用“影响面×严重程度”排序','优化后重跑完整评测集']}
+ ]),
+ curatedCard('demo_new_k3','concept','即时零售是线上下单、线下近场履约，并在1—2小时内送达的零售模式','即时零售','demo_instant_retail',[
+  {kind:'overview',level:0,title:'定义与基础模式',content:'消费者在线上平台下单，由线下商家或前置仓快速履约，核心特征是“即需即得”。',items:['平台模式：整合第三方商家与运力','前置仓：以区域仓提升供给密度','店仓一体：门店同时承担销售与履约']},
+  {kind:'case',level:1,title:'三家平台的业务侧重',content:'平台都做即时零售，但优势来源不同。',items:['美团闪购：骑手网络，高频且强时效','京东秒送：供应链与物流，侧重3C、家电和商超','淘宝闪购：一级入口连接饿了么供给与淘天品牌商家']}
+ ]),
+ curatedCard('demo_new_k4','concept','智能体是能够理解目标、调用工具、利用知识并自主完成任务的 AI 系统','AI智能体','demo_agent',[
+  {kind:'overview',level:0,title:'五个组成部分',content:'智能体不是单独一个大模型，而是由提示词、大模型、知识库、插件和工作流共同组成。',items:['提示词：定义角色、目标与完成标准','大模型：理解问题、分析并生成决策','知识库：提供专业知识和长期记忆','插件：连接搜索、软件和 API','工作流：规定任务执行步骤与协作路径']}
+ ]),
+ curatedCard('demo_new_k5','viewpoint','AI 办公的主角正从协同软件转向能直接完成任务的 Agent','AI办公','demo_ai_office',[
+  {kind:'viewpoint',level:0,title:'三个核心判断',content:'以下是节目嘉宾的行业判断，并非已经验证的行业定论。',items:['飞书与钉钉可能成为 AI 办公生态的基础设施或入口','旧平台受组织、权限和既有结构约束，独立产品可能迭代更快','个人生产力与企业办公边界模糊，付费主体可能包括个人和企业']},
+  {kind:'mechanism',level:1,title:'竞争节奏为什么变快',content:'模型能力趋同后，差异更多来自真实任务、工具调用、数据权限与交付速度。',items:[]}
+ ]),
+ curatedCard('demo_new_k6','case','飞书拆分反映出旧协同平台与新 AI 产品需要不同的组织和迭代方式','AI办公','demo_ai_office',[
+  {kind:'fact',level:0,title:'材料中的现状',content:'节目讨论称，飞书商业化团队并入火山引擎、部分产品团队转向豆包企业版方向，研发汇报关系也发生变化。',items:['以上为节目材料中的信息，不扩展为未经来源支持的事实']},
+  {kind:'viewpoint',level:1,title:'可能的产品含义',content:'嘉宾认为，原有飞书体系内的 AI 改造受权限、数据和既有协作逻辑约束；拆分可能提供独立试错空间。',items:[]}
+ ]),
+ curatedCard('demo_new_k7','analysis','豆包两亿日活是强入口，但能否转化为办公价值取决于任务完成与付费闭环','AI办公','demo_ai_office',[
+  {kind:'fact',level:0,title:'已知事实与问题',content:'材料给出的事实是豆包约两亿日活；高活跃意味着触达优势，但不等于办公商业化成立。',items:['C端广告与会员模式面临体验或规模约束','与飞书结合可补充企业入口与品牌信任']},
+  {kind:'viewpoint',level:1,title:'判断资产还是负债的标准',content:'应分别检验用户能否进入高价值任务、任务能否稳定交付、成本是否低于付费收入，不能用产品形态未定替代回答。',items:[]}
+ ]),
+ curatedCard('demo_new_k8','framework','AI 办公的两条路线，分别围绕企业数据权限与个人任务交付建立优势','AI办公','demo_ai_office',[
+  {kind:'framework',level:0,title:'两类产品的差异',content:'企业协同类和个人生产力类解决的问题不同，不宜只用日活或模型能力比较。',items:['飞书类：依托组织、数据和权限体系，适合企业复杂流程','Workbody类：抓取本地数据，以个人任务为入口，迭代更快']},
+  {kind:'viewpoint',level:1,title:'行业趋势判断',content:'基础模型能力接近后，壁垒更可能来自场景数据、权限连接、任务交付稳定性和可持续付费模型。',items:[]}
+ ])
+];
 (function enablePinMindDemo(){
   const date=new Date(),today=date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
   const dateKey=offset=>{const value=new Date(date);value.setDate(value.getDate()-offset);return value.getFullYear()+'-'+String(value.getMonth()+1).padStart(2,'0')+'-'+String(value.getDate()).padStart(2,'0')};
-  const historyGroups=[[PINMIND_DEMO_KNOWLEDGE[0],PINMIND_DEMO_KNOWLEDGE[3],PINMIND_DEMO_KNOWLEDGE[5]],[PINMIND_DEMO_KNOWLEDGE[1],PINMIND_DEMO_KNOWLEDGE[4],PINMIND_DEMO_KNOWLEDGE[6]]],uncollectedItems=PINMIND_DEMO_KNOWLEDGE.slice(5,7);
-  window.PinMindDemo={enabled:true,today,sources:PINMIND_DEMO_SOURCES,knowledge:PINMIND_DEMO_KNOWLEDGE};
+  const historyGroups=[[PINMIND_DEMO_CURATED_KNOWLEDGE[0],PINMIND_DEMO_CURATED_KNOWLEDGE[2],PINMIND_DEMO_CURATED_KNOWLEDGE[4]],[PINMIND_DEMO_CURATED_KNOWLEDGE[1],PINMIND_DEMO_CURATED_KNOWLEDGE[3]],[PINMIND_DEMO_CURATED_KNOWLEDGE[5],PINMIND_DEMO_CURATED_KNOWLEDGE[6],PINMIND_DEMO_CURATED_KNOWLEDGE[7]]],uncollectedItems=PINMIND_DEMO_CURATED_KNOWLEDGE.slice(6,8);
+  window.PinMindDemo={enabled:true,today,sources:PINMIND_DEMO_CURATED_SOURCES,knowledge:PINMIND_DEMO_CURATED_KNOWLEDGE};
   const original={today:PinMindAPI.today.bind(PinMindAPI),sources:PinMindAPI.sources.bind(PinMindAPI),history:PinMindAPI.history.bind(PinMindAPI)};
-  PinMindAPI.sources=async()=>{try{const live=await original.sources();return {sources:[...PINMIND_DEMO_SOURCES,...(live.sources||[])]}}catch{return {sources:PINMIND_DEMO_SOURCES}}};
-  PinMindAPI.today=async()=>{try{const live=await original.today();if(live.knowledge_items?.length)return live}catch{}const active=window.dailyTimeReached?.()||false,current=window.PinMindSchedule?.localDateKey(new Date())||today;return {digest_date:current,knowledge_items:[PINMIND_DEMO_KNOWLEDGE[2]]}};
-  PinMindAPI.history=async()=>{let live={digests:[]};try{live=await original.history()}catch{}return {digests:[{digest_date:dateKey(1),knowledge_items:historyGroups[0]},{digest_date:dateKey(2),knowledge_items:historyGroups[1]},...(live.digests||[])]}};
-  if(!localStorage.getItem('pinmind.demoSeeded')){const mapped=mapKnowledgeItems(PINMIND_DEMO_KNOWLEDGE.slice(0,2),PINMIND_DEMO_SOURCES).map(item=>({...item,digestDate:today}));localStorage.setItem('pinmind.libraryItems',JSON.stringify(mapped));localStorage.setItem('pinmind.collected',JSON.stringify(mapped.map(item=>item.headline)));localStorage.setItem('pinmind.demoSeeded','1');}
-  if(!localStorage.getItem('pinmind.demoArchiveSeeded')){const existing=PinMindState.uncollected(),mapped=mapKnowledgeItems(uncollectedItems,PINMIND_DEMO_SOURCES).map((item,index)=>({...item,digestDate:dateKey(index+3)}));localStorage.setItem('pinmind.uncollected',JSON.stringify([...existing,...mapped]));localStorage.setItem('pinmind.demoArchiveSeeded','1');}
-  document.addEventListener('DOMContentLoaded',()=>{const badge=document.createElement('div');badge.className='demo-banner';badge.innerHTML='<span><strong>Web Demo</strong> · 今日、历史与未收录均已准备代表性内容</span><button>重置演示</button>';badge.querySelector('button').addEventListener('click',()=>{Object.keys(localStorage).filter(key=>key.startsWith('pinmind.')).forEach(key=>localStorage.removeItem(key));location.reload()});document.body.appendChild(badge)});
+  PinMindAPI.sources=async()=>{try{const live=await original.sources();return {sources:[...PINMIND_DEMO_CURATED_SOURCES,...(live.sources||[])]}}catch{return {sources:PINMIND_DEMO_CURATED_SOURCES}}};
+  PinMindAPI.today=async()=>{try{const live=await original.today();if(live.knowledge_items?.length&&window.dailyTimeReached?.())return live}catch{}const active=window.dailyTimeReached?.()||false,current=window.PinMindSchedule?.localDateKey(new Date())||today;return {digest_date:current,knowledge_items:active?[PINMIND_DEMO_CURATED_KNOWLEDGE[3]]:[]}};
+  PinMindAPI.history=async()=>{let live={digests:[]};try{live=await original.history()}catch{}return {digests:[{digest_date:dateKey(1),knowledge_items:historyGroups[0]},{digest_date:dateKey(2),knowledge_items:historyGroups[1]},{digest_date:dateKey(3),knowledge_items:historyGroups[2]},...(live.digests||[])]}};
+  if(!localStorage.getItem('pinmind.demoSeededV2')){const mapped=mapKnowledgeItems(PINMIND_DEMO_CURATED_KNOWLEDGE.slice(0,2),PINMIND_DEMO_CURATED_SOURCES).map(item=>({...item,digestDate:today}));localStorage.setItem('pinmind.libraryItems',JSON.stringify(mapped));localStorage.setItem('pinmind.collected',JSON.stringify(mapped.map(item=>item.headline)));localStorage.setItem('pinmind.demoSeededV2','1');}
+  if(!localStorage.getItem('pinmind.demoArchiveSeededV2')){const existing=PinMindState.uncollected(),mapped=mapKnowledgeItems(uncollectedItems,PINMIND_DEMO_CURATED_SOURCES).map((item,index)=>({...item,digestDate:dateKey(index+3)}));localStorage.setItem('pinmind.uncollected',JSON.stringify([...existing,...mapped]));localStorage.setItem('pinmind.demoArchiveSeededV2','1');}
+  document.addEventListener('DOMContentLoaded',()=>{const badge=document.createElement('div');badge.className='demo-banner';badge.innerHTML='<span><strong>Web Demo</strong> · 今日知识将在你设定的时间后生成，历史知识可随时查看</span><button>重置演示</button>';badge.querySelector('button').addEventListener('click',()=>{Object.keys(localStorage).filter(key=>key.startsWith('pinmind.')).forEach(key=>localStorage.removeItem(key));location.reload()});document.body.appendChild(badge)});
 })();
