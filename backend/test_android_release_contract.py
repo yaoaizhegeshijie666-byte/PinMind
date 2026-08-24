@@ -72,7 +72,7 @@ class AndroidReleaseContractTest(unittest.TestCase):
         self.assertIn('PINMIND_KEYSTORE_PATH', gradle)
         self.assertIn(':app:assembleRelease', workflow)
         self.assertIn('secrets.PINMIND_KEYSTORE_BASE64', workflow)
-        self.assertIn('jarsigner -verify', workflow)
+        self.assertIn('apksigner', workflow)
         self.assertNotIn(':app:assembleDebug', workflow)
 if __name__ == "__main__":
     unittest.main()
